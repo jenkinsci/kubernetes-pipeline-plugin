@@ -25,9 +25,6 @@ import java.util.UUID;
 
 public class PodStepExecution extends AbstractStepExecutionImpl {
 
-
-    private transient KubernetesClient client = new DefaultKubernetesClient();
-
     @Inject
     private transient PodStep step;
 
@@ -45,7 +42,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
         body = context.newBodyInvoker()
                 .withContext(BodyInvoker
-                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new ContainerExecDecorator(client, podName, step.getImage(), workspace.getRemote(), createPodEnv())))
+                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new ContainerExecDecorator(podName, step.getImage(), workspace.getRemote(), createPodEnv())))
                 .withCallback(new BodyExecutionCallback() {
                     @Override
                     public void onSuccess(StepContext context, Object result) {
@@ -63,7 +60,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
     @Override
     public void stop(Throwable cause) throws Exception {
-        client.pods().withName(step.getPodName()).delete();
+
     }
 
     private List<EnvVar> createPodEnv() throws IOException, InterruptedException {
