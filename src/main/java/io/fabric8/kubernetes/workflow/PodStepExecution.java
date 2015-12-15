@@ -7,8 +7,6 @@ import hudson.model.Computer;
 import hudson.model.TaskListener;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.BodyExecution;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
@@ -22,6 +20,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.fabric8.kubernetes.workflow.KubernetesFacade.createPod;
+import static io.fabric8.kubernetes.workflow.KubernetesFacade.watch;
 
 public class PodStepExecution extends AbstractStepExecutionImpl {
 
@@ -39,10 +42,16 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
     public boolean start() throws Exception {
         StepContext context = getContext();
         String podName = step.getPodName() + "-" + UUID.randomUUID().toString();
+        final AtomicBoolean alive = new AtomicBoolean(false);
+        final CountDownLatch started = new CountDownLatch(1);
+        final CountDownLatch finished = new CountDownLatch(1);
+        Pod pod = createPod(podName, step.getImage(), workspace.getRemote(), createPodEnv(), "cat");
+        watch(podName, alive, started, finished, true);
+        started.await();
 
         body = context.newBodyInvoker()
                 .withContext(BodyInvoker
-                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new ContainerExecDecorator(podName, step.getImage(), workspace.getRemote(), createPodEnv())))
+                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(podName, alive, started, finished)))
                 .withCallback(new BodyExecutionCallback() {
                     @Override
                     public void onSuccess(StepContext context, Object result) {
@@ -53,8 +62,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
                     public void onFailure(StepContext context, Throwable t) {
                         listener.error("Failed to execute step:"+t.getMessage());
                     }
-                })
-                .start();
+                }).start();
         return false;
     }
 
