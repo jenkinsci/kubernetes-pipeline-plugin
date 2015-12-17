@@ -31,4 +31,19 @@ Jenkins plugin which allows building and testing inside Kubernetes Pods.
     kubernetes.pod('buildpod').withImage('maven').privileged().inside {      
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
-    }    
+    }   
+     
+## Technical notes
+
+Under the hood the plugin is using hostPath mounts. This requires two things
+
+- A service account associated with a security context constraint that allows hostPath mounts. 
+- A host capable of hostPath mounts
+
+An example security context constraint that configures *myserviceacccount* in the *default* namespace can be found [here](docs/scc-example.json)
+
+In some linux distros in order to use hostPath mounts you may need to use the following command on the docker host:
+    
+    chcon -Rt svirt_sandbox_file_t <host path>
+
+     

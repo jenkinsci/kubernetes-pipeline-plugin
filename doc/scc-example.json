@@ -1,0 +1,35 @@
+{
+  "kind": "SecurityContextConstraints",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "example"
+  },
+  "priority": null,
+  "allowPrivilegedContainer": true,
+  "allowedCapabilities": null,
+  "allowHostDirVolumePlugin": true,
+  "allowHostNetwork": true,
+  "allowHostPorts": true,
+  "allowHostPID": false,
+  "allowHostIPC": false,
+  "seLinuxContext": {
+    "type": "RunAsAny"
+  },
+  "runAsUser": {
+    "type": "RunAsAny"
+  },
+  "supplementalGroups": {
+    "type": "RunAsAny"
+  },
+  "fsGroup": {
+    "type": "RunAsAny"
+  },
+  "users": [
+    "system:serviceaccount:default:myserviceaccount",
+    "myuser"
+  ],
+  "groups": [
+    "system:cluster-admins",
+    "system:nodes"
+  ]
+}
