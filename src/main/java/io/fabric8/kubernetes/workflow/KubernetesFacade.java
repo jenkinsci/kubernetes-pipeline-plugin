@@ -22,12 +22,15 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public final class KubernetesFacade {
+import static io.fabric8.kubernetes.workflow.Constants.EXIT;
+import static io.fabric8.kubernetes.workflow.Constants.FAILED_PHASE;
+import static io.fabric8.kubernetes.workflow.Constants.NEWLINE;
+import static io.fabric8.kubernetes.workflow.Constants.RUNNING_PHASE;
+import static io.fabric8.kubernetes.workflow.Constants.SPACE;
+import static io.fabric8.kubernetes.workflow.Constants.SUCCEEDED_PHASE;
+import static io.fabric8.kubernetes.workflow.Constants.UTF_8;
 
-    private static final String RUNNING_PHASE = "Running";
-    private static final String SUCCEEDED_PHASE = "Succeeded";
-    private static final String FAILED_PHASE = "Failed";
-    private static final String EMPTY = "";
+public final class KubernetesFacade {
 
     private static final KubernetesClient CLIENT = new DefaultKubernetesClient();
     private static final Map<String, Set<Closeable>> CLOSEABLES = new HashMap<>();
@@ -89,8 +92,7 @@ public final class KubernetesFacade {
     }
 
 
-    public static ExecWatch exec(String podName, final PrintStream out, final String... statements) {
-        final CountDownLatch open = new CountDownLatch(1);
+    public static ExecWatch exec(String podName,  final AtomicBoolean alive, final CountDownLatch started, final CountDownLatch finished, final PrintStream out, final String... statements) {
         ExecWatch watch = CLIENT.pods().withName(podName)
                 .redirectingInput()
                 .writingOutput(out)
@@ -99,21 +101,28 @@ public final class KubernetesFacade {
                 .usingListener(new ExecListener() {
                     @Override
                     public void onOpen(Response response) {
+                        alive.set(true);
                         out.println("Open");
                         out.flush();
-                        open.countDown();
+                        started.countDown();
+
                     }
                     @Override
                     public void onFailure(IOException e, Response response) {
+                        alive.set(false);
                         e.printStackTrace(out);
-                        open.countDown();
+                        started.countDown();
+                        finished.countDown();
                     }
 
                     @Override
                     public void onClose(int i, String s) {
+                        alive.set(false);
                         out.println("Close");
                         out.flush();
-                        open.countDown();
+                        started.countDown();
+                        finished.countDown();
+
                     }
                 }).exec();
 
@@ -121,21 +130,22 @@ public final class KubernetesFacade {
             CLOSEABLES.get(podName).add(watch);
         }
 
+        waitQuietly(started);
+
         try {
-            open.await();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            for (String stmt : statements) {
+                watch.getInput().write((stmt).getBytes(UTF_8));
+                watch.getInput().write((SPACE).getBytes(UTF_8));
+            }
+            //We need to exit so that we know when the command has finished.
+            watch.getInput().write(NEWLINE.getBytes(UTF_8));
+            watch.getInput().write(EXIT.getBytes(UTF_8));
+            watch.getInput().write(NEWLINE.getBytes(UTF_8));
+            watch.getInput().flush();
+        } catch (Exception e) {
+            e.printStackTrace(out);
         }
 
-        for (String stmt : statements) {
-            try {
-                out.println(stmt);
-                out.flush();
-                watch.getInput().write((stmt + "\n").getBytes("UTF-8"));
-            } catch (Exception e) {
-                e.printStackTrace(out);
-            }
-        }
         return watch;
     }
 
@@ -164,11 +174,20 @@ public final class KubernetesFacade {
                 (SUCCEEDED_PHASE.equals(pod.getStatus().getPhase()) || FAILED_PHASE.equals(pod.getStatus().getPhase()));
     }
 
+
     private static void cleanUp(String podName) {
         synchronized (CLOSEABLES) {
             for (Closeable c : CLOSEABLES.remove(podName)) {
                 closeQuietly(c);
             }
+        }
+    }
+
+    private static void waitQuietly(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            //ignore
         }
     }
 

@@ -42,25 +42,27 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
     public boolean start() throws Exception {
         StepContext context = getContext();
         String podName = step.getPodName() + "-" + UUID.randomUUID().toString();
-        final AtomicBoolean alive = new AtomicBoolean(false);
-        final CountDownLatch started = new CountDownLatch(1);
-        final CountDownLatch finished = new CountDownLatch(1);
+        final AtomicBoolean podAlive = new AtomicBoolean(false);
+        final CountDownLatch podStarted = new CountDownLatch(1);
+        final CountDownLatch podFinished = new CountDownLatch(1);
         Pod pod = createPod(podName, step.getImage(), workspace.getRemote(), createPodEnv(), "cat");
-        watch(podName, alive, started, finished, true);
-        started.await();
+        watch(podName, podAlive, podStarted, podFinished, true);
+        podStarted.await();
 
         body = context.newBodyInvoker()
                 .withContext(BodyInvoker
-                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(podName, alive, started, finished)))
+                .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(podName, podAlive, podStarted, podFinished)))
                 .withCallback(new BodyExecutionCallback() {
                     @Override
                     public void onSuccess(StepContext context, Object result) {
                         listener.error("Done");
+                        context.onSuccess(result);
                     }
 
                     @Override
                     public void onFailure(StepContext context, Throwable t) {
-                        listener.error("Failed to execute step:"+t.getMessage());
+                        listener.error("Failed to execute step:" + t.getMessage());
+                        context.onFailure(t);
                     }
                 }).start();
         return false;
@@ -68,7 +70,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
     @Override
     public void stop(Throwable cause) throws Exception {
-
+        listener.error("Stoping");
     }
 
     private List<EnvVar> createPodEnv() throws IOException, InterruptedException {
@@ -77,7 +79,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         EnvVars envHost = computer.getEnvironment();
         envReduced.entrySet().removeAll(envHost.entrySet());
 
-        for (Map.Entry<String,String> entry : envReduced.entrySet()) {
+        for (Map.Entry<String, String> entry : envReduced.entrySet()) {
             podEnv.add(new EnvVar(entry.getKey(), entry.getValue(), null));
         }
         return podEnv;
