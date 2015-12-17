@@ -41,11 +41,11 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
     @Override
     public boolean start() throws Exception {
         StepContext context = getContext();
-        String podName = step.getPodName() + "-" + UUID.randomUUID().toString();
+        String podName = step.getName() + "-" + UUID.randomUUID().toString();
         final AtomicBoolean podAlive = new AtomicBoolean(false);
         final CountDownLatch podStarted = new CountDownLatch(1);
         final CountDownLatch podFinished = new CountDownLatch(1);
-        Pod pod = createPod(podName, step.getImage(), workspace.getRemote(), createPodEnv(), "cat");
+        Pod pod = createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), workspace.getRemote(), createPodEnv(), "cat");
         watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 

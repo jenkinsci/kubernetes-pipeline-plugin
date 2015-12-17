@@ -11,6 +11,8 @@ public class Constants {
     static final String NEWLINE = "\n";
     static final String UTF_8 = "UTF-8";
 
+    static final String VOLUME_PREFIX = "volume-";
+
     static final char CTRL_C = '\u0003';
 
 }

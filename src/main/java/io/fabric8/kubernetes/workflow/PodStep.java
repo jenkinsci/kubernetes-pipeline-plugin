@@ -3,25 +3,46 @@ package io.fabric8.kubernetes.workflow;
 import hudson.Extension;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import java.util.Map;
 
 public class PodStep extends AbstractStepImpl {
 
-   private final String image;
-   private final String podName;
+    private final String name;
+    private final String image;
+    private final String serviceAccount;
+    private final Boolean privileged;
+    private final Map secrets;
 
     @DataBoundConstructor
-    public PodStep(String image, String podName) {
+    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets) {
+        this.name = name;
         this.image = image;
-        this.podName = podName;
+        this.serviceAccount = serviceAccount;
+        this.privileged = privileged;
+        this.secrets = secrets;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public String getImage() {
         return image;
     }
 
-    public String getPodName() {
-        return podName;
+    public String getServiceAccount() {
+        return serviceAccount;
+    }
+
+    public Boolean getPrivileged() {
+        return privileged;
+    }
+
+    public Map<String, String> getSecrets() {
+        return secrets;
     }
 
     @Extension
@@ -29,6 +50,10 @@ public class PodStep extends AbstractStepImpl {
 
         public DescriptorImpl() {
             super(PodStepExecution.class);
+        }
+
+        public DescriptorImpl(Class<? extends StepExecution> executionType) {
+            super(executionType);
         }
 
         @Override

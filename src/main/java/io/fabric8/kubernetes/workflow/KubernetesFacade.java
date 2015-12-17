@@ -2,7 +2,10 @@ package io.fabric8.kubernetes.workflow;
 
 import com.squareup.okhttp.Response;
 import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -13,6 +16,7 @@ import io.fabric8.kubernetes.client.dsl.LogWatch;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,29 +33,49 @@ import static io.fabric8.kubernetes.workflow.Constants.RUNNING_PHASE;
 import static io.fabric8.kubernetes.workflow.Constants.SPACE;
 import static io.fabric8.kubernetes.workflow.Constants.SUCCEEDED_PHASE;
 import static io.fabric8.kubernetes.workflow.Constants.UTF_8;
+import static io.fabric8.kubernetes.workflow.Constants.VOLUME_PREFIX;
 
 public final class KubernetesFacade {
 
     private static final KubernetesClient CLIENT = new DefaultKubernetesClient();
     private static final Map<String, Set<Closeable>> CLOSEABLES = new HashMap<>();
 
-    public static Pod createPod(String podName, String image, String workspace, List<EnvVar> env, String cmd) {
-        Pod pod = CLIENT.pods().createNew()
+    public static io.fabric8.kubernetes.api.model.Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, String workspace, List<EnvVar> env, String cmd) {
+        List<Volume> volumes = new ArrayList<>();
+        List<VolumeMount> mounts = new ArrayList<>();
+
+        int volumeIndex = 1;
+
+        //mandatory volumes
+        volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewHostPath(workspace).build());
+        mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(workspace).build());
+        volumeIndex++;
+
+        for (Map.Entry<String, String> entry : secrets.entrySet()) {
+            String secret = entry.getKey();
+            String mountPath = entry.getValue();
+
+            volumes.add(new VolumeBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withNewSecret(secret)
+                    .build());
+            mounts.add(new VolumeMountBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withMountPath(mountPath)
+                    .build());
+
+            volumeIndex++;
+        }
+
+        io.fabric8.kubernetes.api.model.Pod p = CLIENT.pods().createNew()
                 .withNewMetadata()
-                .withName(podName)
+                .withName(name)
                 .addToLabels("owner", "jenkins")
                 .endMetadata()
                 .withNewSpec()
-                .addNewVolume()
-                .withName("workspace")
-                .withNewHostPath(workspace)
-                .endVolume()
-                .withServiceAccount("fabric8")
+                .withVolumes(volumes)
                 .addNewContainer()
-                .addNewVolumeMount()
-                .withName("workspace")
-                .withMountPath(workspace)
-                .endVolumeMount()
+                .withVolumeMounts(mounts)
                 .withName("podstep")
                 .withImage(image)
                 .withEnv(env)
@@ -59,15 +83,20 @@ public final class KubernetesFacade {
                 .withCommand("/bin/sh", "-c")
                 .withArgs(cmd) // Always get the last part
                 .withTty(true) //It screws up getLog() if tty = true
+                .withNewSecurityContext()
+                    .withPrivileged(privileged)
+                .endSecurityContext()
+                .withVolumeMounts(mounts)
                 .endContainer()
                 .withRestartPolicy("Never")
+                .withServiceAccount(serviceAccount)
                 .endSpec()
                 .done();
 
         synchronized (CLOSEABLES) {
-            CLOSEABLES.put(podName, new HashSet<Closeable>());
+            CLOSEABLES.put(name, new HashSet<Closeable>());
         }
-        return pod;
+        return p;
     }
 
     public static Boolean deletePod(String podName) {
@@ -102,8 +131,6 @@ public final class KubernetesFacade {
                     @Override
                     public void onOpen(Response response) {
                         alive.set(true);
-                        out.println("Open");
-                        out.flush();
                         started.countDown();
 
                     }
@@ -118,8 +145,6 @@ public final class KubernetesFacade {
                     @Override
                     public void onClose(int i, String s) {
                         alive.set(false);
-                        out.println("Close");
-                        out.flush();
                         started.countDown();
                         finished.countDown();
 
@@ -165,11 +190,11 @@ public final class KubernetesFacade {
         return watch;
     }
 
-    public static final boolean isPodRunning(Pod pod) {
+    public static final boolean isPodRunning(io.fabric8.kubernetes.api.model.Pod pod) {
         return pod != null && pod.getStatus() != null && RUNNING_PHASE.equals(pod.getStatus().getPhase());
     }
 
-    public static final boolean isPodCompleted(Pod pod) {
+    public static final boolean isPodCompleted(io.fabric8.kubernetes.api.model.Pod pod) {
         return pod != null && pod.getStatus() != null &&
                 (SUCCEEDED_PHASE.equals(pod.getStatus().getPhase()) || FAILED_PHASE.equals(pod.getStatus().getPhase()));
     }
