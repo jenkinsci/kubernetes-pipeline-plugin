@@ -45,7 +45,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         final AtomicBoolean podAlive = new AtomicBoolean(false);
         final CountDownLatch podStarted = new CountDownLatch(1);
         final CountDownLatch podFinished = new CountDownLatch(1);
-        Pod pod = createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), workspace.getRemote(), createPodEnv(), "cat");
+        Pod pod = createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
         watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 
@@ -73,13 +73,17 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         listener.error("Stoping");
     }
 
-    private List<EnvVar> createPodEnv() throws IOException, InterruptedException {
+    private List<EnvVar> createPodEnv(Map<String,String> env) throws IOException, InterruptedException {
         List<EnvVar> podEnv = new ArrayList<EnvVar>();
         EnvVars envReduced = new EnvVars(env);
         EnvVars envHost = computer.getEnvironment();
         envReduced.entrySet().removeAll(envHost.entrySet());
 
         for (Map.Entry<String, String> entry : envReduced.entrySet()) {
+            podEnv.add(new EnvVar(entry.getKey(), entry.getValue(), null));
+        }
+
+        for (Map.Entry<String, String> entry : env.entrySet()) {
             podEnv.add(new EnvVar(entry.getKey(), entry.getValue(), null));
         }
         return podEnv;

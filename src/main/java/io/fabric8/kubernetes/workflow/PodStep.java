@@ -15,14 +15,16 @@ public class PodStep extends AbstractStepImpl {
     private final String serviceAccount;
     private final Boolean privileged;
     private final Map secrets;
+    private final Map env;
 
     @DataBoundConstructor
-    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets) {
+    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map env) {
         this.name = name;
         this.image = image;
         this.serviceAccount = serviceAccount;
         this.privileged = privileged;
         this.secrets = secrets;
+        this.env = env;
     }
 
     public String getName() {
@@ -43,6 +45,11 @@ public class PodStep extends AbstractStepImpl {
 
     public Map<String, String> getSecrets() {
         return secrets;
+    }
+
+
+    public Map<String, String> getEnv() {
+        return env;
     }
 
     @Extension
