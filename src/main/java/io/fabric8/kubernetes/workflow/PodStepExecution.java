@@ -23,9 +23,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.fabric8.kubernetes.workflow.KubernetesFacade.createPod;
-import static io.fabric8.kubernetes.workflow.KubernetesFacade.watch;
-
 public class PodStepExecution extends AbstractStepExecutionImpl {
 
     @Inject
@@ -35,23 +32,25 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
     @StepContextParameter private transient EnvVars env;
     @StepContextParameter private transient TaskListener listener;
     @StepContextParameter private transient Computer computer;
-
+    private transient KubernetesFacade kubernetes;
+    private transient String podName;
     private volatile BodyExecution body;
 
     @Override
     public boolean start() throws Exception {
         StepContext context = getContext();
-        String podName = step.getName() + "-" + UUID.randomUUID().toString();
+        podName = step.getName() + "-" + UUID.randomUUID().toString();
         final AtomicBoolean podAlive = new AtomicBoolean(false);
         final CountDownLatch podStarted = new CountDownLatch(1);
         final CountDownLatch podFinished = new CountDownLatch(1);
-        Pod pod = createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
-        watch(podName, podAlive, podStarted, podFinished, true);
+        kubernetes = new KubernetesFacade();
+        Pod pod = kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
+        kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 
         body = context.newBodyInvoker()
                 .withContext(BodyInvoker
-                .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(podName, podAlive, podStarted, podFinished)))
+                .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, podAlive, podStarted, podFinished)))
                 .withCallback(new BodyExecutionCallback() {
                     @Override
                     public void onSuccess(StepContext context, Object result) {
@@ -70,7 +69,10 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
     @Override
     public void stop(Throwable cause) throws Exception {
-        listener.error("Stoping");
+        if (kubernetes != null) {
+            kubernetes.deletePod(podName);
+            kubernetes.close();
+        }
     }
 
     private List<EnvVar> createPodEnv(Map<String,String> env) throws IOException, InterruptedException {

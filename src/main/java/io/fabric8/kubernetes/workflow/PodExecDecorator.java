@@ -14,17 +14,16 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.fabric8.kubernetes.workflow.KubernetesFacade.deletePod;
-import static io.fabric8.kubernetes.workflow.KubernetesFacade.exec;
-
 public class PodExecDecorator extends LauncherDecorator implements Serializable {
 
-    private final String name;
+    private final transient KubernetesFacade kubernetes;
+    private final transient String name;
     private final transient AtomicBoolean alive;
     private final transient CountDownLatch started;
     private final transient CountDownLatch finished;
 
-    public PodExecDecorator(String name, AtomicBoolean alive, CountDownLatch started, CountDownLatch finished) {
+    public PodExecDecorator(KubernetesFacade kubernetes, String name, AtomicBoolean alive, CountDownLatch started, CountDownLatch finished) {
+        this.kubernetes = kubernetes;
         this.name = name;
         this.alive = alive;
         this.started = started;
@@ -40,7 +39,7 @@ public class PodExecDecorator extends LauncherDecorator implements Serializable 
                 CountDownLatch processStarted = new CountDownLatch(1);
                 CountDownLatch processFinished = new CountDownLatch(1);
 
-                ExecWatch execWatch = exec(name, processAlive, processStarted, processFinished, launcher.getListener().getLogger(),
+                ExecWatch execWatch = kubernetes.exec(name, processAlive, processStarted, processFinished, launcher.getListener().getLogger(),
                         getCommands(starter)
                 );
                 return new PodExecProc(name, processAlive, processFinished, execWatch);
@@ -48,7 +47,7 @@ public class PodExecDecorator extends LauncherDecorator implements Serializable 
 
             @Override
             public void kill(Map<String, String> modelEnvVars) throws IOException, InterruptedException {
-                deletePod(name);
+                kubernetes.deletePod(name);
             }
         };
     }

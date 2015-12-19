@@ -2,6 +2,7 @@ package io.fabric8.kubernetes.workflow;
 
 import com.squareup.okhttp.Response;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -17,7 +18,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,12 +35,12 @@ import static io.fabric8.kubernetes.workflow.Constants.SUCCEEDED_PHASE;
 import static io.fabric8.kubernetes.workflow.Constants.UTF_8;
 import static io.fabric8.kubernetes.workflow.Constants.VOLUME_PREFIX;
 
-public final class KubernetesFacade {
+public final class KubernetesFacade implements Closeable {
 
-    private static final KubernetesClient CLIENT = new DefaultKubernetesClient();
-    private static final Map<String, Set<Closeable>> CLOSEABLES = new HashMap<>();
+    private final Set<Closeable> closeables = new HashSet<>();
+    private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public static io.fabric8.kubernetes.api.model.Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, String workspace, List<EnvVar> env, String cmd) {
+    public Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, String workspace, List<EnvVar> env, String cmd) {
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
 
@@ -67,7 +67,7 @@ public final class KubernetesFacade {
             volumeIndex++;
         }
 
-        io.fabric8.kubernetes.api.model.Pod p = CLIENT.pods().createNew()
+        io.fabric8.kubernetes.api.model.Pod p = client.pods().createNew()
                 .withNewMetadata()
                 .withName(name)
                 .addToLabels("owner", "jenkins")
@@ -92,19 +92,16 @@ public final class KubernetesFacade {
                 .withServiceAccount(serviceAccount)
                 .endSpec()
                 .done();
-
-        synchronized (CLOSEABLES) {
-            CLOSEABLES.put(name, new HashSet<Closeable>());
-        }
         return p;
     }
 
-    public static Boolean deletePod(String podName) {
-        if (CLIENT.pods().withName(podName).delete()) {
-            synchronized (CLOSEABLES) {
-                for (Closeable c : CLOSEABLES.remove(podName)) {
+    public Boolean deletePod(String podName) {
+        if (client.pods().withName(podName).delete()) {
+            synchronized (closeables) {
+                for (Closeable c : closeables) {
                     closeQuietly(c);
                 }
+                closeables.clear();
             }
             return true;
         } else {
@@ -112,17 +109,17 @@ public final class KubernetesFacade {
         }
     }
 
-    public static LogWatch watchLogs(String podName) {
-        LogWatch watch = CLIENT.pods().withName(podName).watchLog();
-        synchronized (CLOSEABLES) {
-            CLOSEABLES.get(podName).add(watch);
+    public LogWatch watchLogs(String podName) {
+        LogWatch watch = client.pods().withName(podName).watchLog();
+        synchronized (closeables) {
+            closeables.add(watch);
         }
         return watch;
     }
 
 
-    public static ExecWatch exec(String podName,  final AtomicBoolean alive, final CountDownLatch started, final CountDownLatch finished, final PrintStream out, final String... statements) {
-        ExecWatch watch = CLIENT.pods().withName(podName)
+    public ExecWatch exec(String podName,  final AtomicBoolean alive, final CountDownLatch started, final CountDownLatch finished, final PrintStream out, final String... statements) {
+        ExecWatch watch = client.pods().withName(podName)
                 .redirectingInput()
                 .writingOutput(out)
                 .writingError(out)
@@ -151,8 +148,8 @@ public final class KubernetesFacade {
                     }
                 }).exec();
 
-        synchronized (CLOSEABLES) {
-            CLOSEABLES.get(podName).add(watch);
+        synchronized (closeables) {
+            closeables.add(watch);
         }
 
         waitQuietly(started);
@@ -174,20 +171,36 @@ public final class KubernetesFacade {
         return watch;
     }
 
-    public static Watch watch(final String podName, AtomicBoolean alive, CountDownLatch started, CountDownLatch finished, Boolean cleanUpOnFinish) {
+    public Watch watch(final String podName, AtomicBoolean alive, CountDownLatch started, CountDownLatch finished, Boolean cleanUpOnFinish) {
         Callable<Void> onCompletion = cleanUpOnFinish ? new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                cleanUp(podName);
+                cleanUp();
                 return null;
             }
         } : null;
 
-        Watch watch = CLIENT.pods().withName(podName).watch(new PodWatcher(alive, started, finished, onCompletion));
-        synchronized (CLOSEABLES) {
-            CLOSEABLES.get(podName).add(watch);
+        Watch watch = client.pods().withName(podName).watch(new PodWatcher(alive, started, finished, onCompletion));
+        synchronized (closeables) {
+            closeables.add(watch);
         }
         return watch;
+    }
+
+
+    @Override
+    public void close() throws IOException {
+        closeQuietly(client);
+        cleanUp();
+    }
+
+    private void cleanUp() {
+        synchronized (closeables) {
+            for (Closeable c : closeables) {
+                closeQuietly(c);
+            }
+            closeables.clear();
+        }
     }
 
     public static final boolean isPodRunning(io.fabric8.kubernetes.api.model.Pod pod) {
@@ -197,15 +210,6 @@ public final class KubernetesFacade {
     public static final boolean isPodCompleted(io.fabric8.kubernetes.api.model.Pod pod) {
         return pod != null && pod.getStatus() != null &&
                 (SUCCEEDED_PHASE.equals(pod.getStatus().getPhase()) || FAILED_PHASE.equals(pod.getStatus().getPhase()));
-    }
-
-
-    private static void cleanUp(String podName) {
-        synchronized (CLOSEABLES) {
-            for (Closeable c : CLOSEABLES.remove(podName)) {
-                closeQuietly(c);
-            }
-        }
     }
 
     private static void waitQuietly(CountDownLatch latch) {
