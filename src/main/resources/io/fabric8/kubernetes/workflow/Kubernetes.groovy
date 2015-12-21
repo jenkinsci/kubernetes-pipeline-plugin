@@ -36,7 +36,7 @@ class Kubernetes implements Serializable {
     }
 
     public Pod pod(String name) {
-        return new Pod(this, name, null, null, false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>());
+        return new Pod(this, name, null, null, false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>());
     }
 
     public static class Pod implements Serializable {
@@ -47,9 +47,10 @@ class Kubernetes implements Serializable {
         private final Boolean privileged;
         private final Map secrets;
         private final Map hostPathMounts;
+        private final Map emptyDirs;
         private final Map env;
 
-        Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> env) {
+        Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> env) {
             this.kubernetes = kubernetes
             this.name = name
             this.image = image
@@ -57,47 +58,57 @@ class Kubernetes implements Serializable {
             this.privileged = privileged
             this.secrets = secrets
             this.hostPathMounts = hostPathMounts
+            this.emptyDirs = emptyDirs
             this.env = env;
         }
 
         public Pod withName(String name) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withImage(String image) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withServiceAccount(String serviceAccount) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withPrivileged(Boolean privileged) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withSecret(String secretName, String mountPath) {
             Map<String, String> newSecrets = new HashMap<>(secrets);
             newSecrets.put(secretName, mountPath);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, newSecrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, newSecrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withHostPathMount(String hostPath, String mountPath) {
             Map<String, String> newHostPathMounts = new HashMap<>(secrets);
             newHostPathMounts.put(hostPath, mountPath);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, emptyDirs, env);
         }
 
+        public Pod withEmptyDir(String mountPath) {
+            return withEmptyDir(mountPath, null);
+        }
+
+        public Pod withEmptyDir(String mountPath, String medium) {
+            Set<String> newHostPathMounts = new HashSet<>(emtpyDirs);
+            newEmtpyDirs.put(emptyDir, medium);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmtpyDirs, env);
+        }
 
         public Pod withEnvVar(String key, String value) {
             Map<String, String> newEnv = new HashMap<>(secrets);
             newEnv.put(key, value);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEnv);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newEnv);
         }
 
         public <V> V inside(Closure<V> body) {
             kubernetes.node {
-                kubernetes.script.withKubernetesPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, env: env) {
+                kubernetes.script.withKubernetesPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, emptyDirs: emptyDirs, env: env) {
                     body()
                 }
             }

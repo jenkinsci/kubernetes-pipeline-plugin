@@ -56,7 +56,7 @@ public final class KubernetesFacade implements Closeable {
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, String workspace, List<EnvVar> env, String cmd) {
+    public Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, String workspace, List<EnvVar> env, String cmd) {
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
 
@@ -101,7 +101,24 @@ public final class KubernetesFacade implements Closeable {
             volumeIndex++;
         }
 
-        io.fabric8.kubernetes.api.model.Pod p = client.pods().createNew()
+        //Add empty dirs
+        for (Map.Entry<String, String> entry : emptyDirs.entrySet()) {
+            String mountPath = entry.getKey();
+            String medium = entry.getValue();
+
+            volumes.add(new VolumeBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withNewEmptyDir(medium)
+                    .build());
+
+            mounts.add(new VolumeMountBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withMountPath(mountPath)
+                    .build());
+            volumeIndex++;
+        }
+
+        Pod p = client.pods().createNew()
                 .withNewMetadata()
                 .withName(name)
                 .addToLabels("owner", "jenkins")

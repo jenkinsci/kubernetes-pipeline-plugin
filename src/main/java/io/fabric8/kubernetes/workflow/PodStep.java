@@ -23,6 +23,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.Map;
+import java.util.Set;
 
 public class PodStep extends AbstractStepImpl {
 
@@ -32,16 +33,18 @@ public class PodStep extends AbstractStepImpl {
     private final Boolean privileged;
     private final Map secrets;
     private final Map hostPathMounts;
+    private final Map emptyDirs;
     private final Map env;
 
     @DataBoundConstructor
-    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map env) {
+    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map env) {
         this.name = name;
         this.image = image;
         this.serviceAccount = serviceAccount;
         this.privileged = privileged;
         this.secrets = secrets;
         this.hostPathMounts = hostPathMounts;
+        this.emptyDirs = emptyDirs;
         this.env = env;
     }
 
@@ -67,6 +70,10 @@ public class PodStep extends AbstractStepImpl {
 
     public Map<String, String> getHostPathMounts() {
         return hostPathMounts;
+    }
+
+    public  Map<String, String> getEmptyDirs() {
+        return emptyDirs;
     }
 
     public Map<String, String> getEnv() {
