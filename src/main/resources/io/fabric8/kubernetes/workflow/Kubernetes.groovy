@@ -95,9 +95,9 @@ class Kubernetes implements Serializable {
         }
 
         public Pod withEmptyDir(String mountPath, String medium) {
-            Set<String> newHostPathMounts = new HashSet<>(emtpyDirs);
-            newEmtpyDirs.put(emptyDir, medium);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmtpyDirs, env);
+            Set<String> newEmptyDirs = new HashSet<>(emptyDirs);
+            newEmptyDirs.put(emptyDir, medium);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, env);
         }
 
         public Pod withEnvVar(String key, String value) {
