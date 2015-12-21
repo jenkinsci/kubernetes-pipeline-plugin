@@ -56,7 +56,7 @@ public final class KubernetesFacade implements Closeable {
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, String workspace, List<EnvVar> env, String cmd) {
+    public Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, String workspace, List<EnvVar> env, String cmd) {
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
 
@@ -67,6 +67,7 @@ public final class KubernetesFacade implements Closeable {
         mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(workspace).build());
         volumeIndex++;
 
+        //Add secrets first
         for (Map.Entry<String, String> entry : secrets.entrySet()) {
             String secret = entry.getKey();
             String mountPath = entry.getValue();
@@ -74,6 +75,23 @@ public final class KubernetesFacade implements Closeable {
             volumes.add(new VolumeBuilder()
                     .withName(VOLUME_PREFIX + volumeIndex)
                     .withNewSecret(secret)
+                    .build());
+            mounts.add(new VolumeMountBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withMountPath(mountPath)
+                    .build());
+
+            volumeIndex++;
+        }
+
+        //Add host paths
+        for (Map.Entry<String, String> entry : hostPathMounts.entrySet()) {
+            String hostPath = entry.getKey();
+            String mountPath = entry.getValue();
+
+            volumes.add(new VolumeBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withNewHostPath(hostPath)
                     .build());
             mounts.add(new VolumeMountBuilder()
                     .withName(VOLUME_PREFIX + volumeIndex)

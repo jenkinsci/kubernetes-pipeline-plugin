@@ -24,7 +24,13 @@ Jenkins plugin which allows building and testing inside Kubernetes Pods.
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
     }    
+
+### Using host path mounts
     
+    kubernetes.pod('buildpod').withImage('maven').withHostPathMount('/path/on/host', '/path/on/container').inside {      
+        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        sh 'mvn clean install'
+    }    
     
 ### Using privileged containers
 
