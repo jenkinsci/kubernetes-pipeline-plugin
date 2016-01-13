@@ -1,7 +1,7 @@
 Kubernetes Workflow
 -------------------
 
-Jenkins plugin which allows building and testing inside Kubernetes Pods.
+Kubernetes Workflow is Jenkins plugin which extends [Jenkins Workflow](https://github.com/jenkinsci/workflow-plugin) to allow building and testing inside Kubernetes Pods reusing kubernetes features like pods, build images, service accounts, volumes and secrets while providing an elastic slave pool (each build runs in new pods).
 
 ## Features
 - Service Accounts
