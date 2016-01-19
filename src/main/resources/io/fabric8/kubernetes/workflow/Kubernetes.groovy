@@ -39,6 +39,10 @@ class Kubernetes implements Serializable {
         return new Pod(this, name, null, null, false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>());
     }
 
+    public Image image() {
+        return new Image(this);
+    }
+
     public static class Pod implements Serializable {
         private final Kubernetes kubernetes;
         private final String name;
@@ -112,6 +116,114 @@ class Kubernetes implements Serializable {
                     body()
                 }
             }
+        }
+    }
+
+    public static class Image implements Serializable {
+
+        private final Kubernetes kubernetes;
+
+        Image(Kubernetes kubernetes) {
+            this.kubernetes = kubernetes
+        }
+
+        NamedImage withName(String name) {
+            return new NamedImage(kubernetes, name);
+        }
+
+     }
+
+    private static class NamedImage implements Serializable {
+
+        private final Kubernetes kubernetes;
+        private final String name;
+
+        NamedImage(Kubernetes kubernetes, String name) {
+            this.kubernetes = kubernetes
+            this.name = name
+        }
+
+
+        BuildImage build() {
+            return new BuildImage(kubernetes, name, false);
+        }
+
+        PushImage push() {
+            return new PushImage(kubernetes, name, null, false);
+        }
+
+        void tag() {
+            new TagImage(kubernetes, name, null, null);
+        }
+    }
+
+    private static class BuildImage implements Serializable {
+        private final Kubernetes kubernetes;
+        private final String name;
+        private final Boolean rm;
+
+        BuildImage(Kubernetes kubernetes, String name, Boolean rm) {
+            this.kubernetes = kubernetes
+            this.name = name
+            this.rm = rm
+        }
+
+        BuildImage removingIntermediate() {
+            return new BuildImage(kubernetes, name, true);
+        }
+
+        void fromPath(String path) {
+            kubernetes.script.buildImage(name: name, rm: rm, path: path);
+        }
+
+    }
+
+    private static class TagImage implements Serializable {
+        private final Kubernetes kubernetes;
+        private final String name;
+        private final String repo;
+        private final String tagName;
+
+        TagImage(Kubernetes kubernetes, String name, String repo, String tagName) {
+            this.kubernetes = kubernetes
+            this.name = name
+            this.repo = repo
+            this.tagName = tagName
+        }
+
+        TagImage inRepository(String repo) {
+            return new TagImage(kubernetes, name, repo, tagName);
+        }
+
+        TagImage withTag(String tagName) {
+            return kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName);
+        }
+    }
+
+    private static class PushImage implements Serializable {
+        private final Kubernetes kubernetes;
+        private final String name;
+        private final String tagName;
+        private final Boolean force;
+
+
+        PushImage(Kubernetes kubernetes, String name, String tagName, Boolean force) {
+            this.kubernetes = kubernetes;
+            this.name = name;
+            this.tagName = tagName;
+            this.force = force
+        }
+
+        PushImage force() {
+            return new PushImage(kubernetes, name, tagName, true);
+        }
+
+        PushImage withTag(String tagName) {
+            return new PushImage(kubernetes, name, tagName, force);
+        }
+
+        void toRegistry() {
+            kubernetes.script.pushImage(name: name, force: force, tagName: tagName);
         }
     }
 

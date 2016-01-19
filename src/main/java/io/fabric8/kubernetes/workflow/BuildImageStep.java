@@ -23,68 +23,37 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.Map;
-import java.util.Set;
 
-public class PodStep extends AbstractStepImpl {
+public class BuildImageStep extends AbstractStepImpl {
 
     private final String name;
-    private final String image;
-    private final String serviceAccount;
-    private final Boolean privileged;
-    private final Map secrets;
-    private final Map hostPathMounts;
-    private final Map emptyDirs;
-    private final Map env;
+    private final Boolean rm;
+    private final String path;
 
     @DataBoundConstructor
-    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map env) {
+    public BuildImageStep(String name, Boolean rm, String path) {
         this.name = name;
-        this.image = image;
-        this.serviceAccount = serviceAccount;
-        this.privileged = privileged;
-        this.secrets = secrets;
-        this.hostPathMounts = hostPathMounts;
-        this.emptyDirs = emptyDirs;
-        this.env = env;
+        this.rm = rm;
+        this.path = path;
     }
 
     public String getName() {
         return name;
     }
 
-    public String getImage() {
-        return image;
+    public Boolean getRm() {
+        return rm;
     }
 
-    public String getServiceAccount() {
-        return serviceAccount;
-    }
-
-    public Boolean getPrivileged() {
-        return privileged;
-    }
-
-    public Map<String, String> getSecrets() {
-        return secrets;
-    }
-
-    public Map<String, String> getHostPathMounts() {
-        return hostPathMounts;
-    }
-
-    public  Map<String, String> getEmptyDirs() {
-        return emptyDirs;
-    }
-
-    public Map<String, String> getEnv() {
-        return env;
+    public String getPath() {
+        return path;
     }
 
     @Extension
     public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
        public DescriptorImpl() {
-            super(PodStepExecution.class);
+            super(BuildImageStepExecution.class);
         }
 
         public DescriptorImpl(Class<? extends StepExecution> executionType) {
@@ -93,17 +62,17 @@ public class PodStep extends AbstractStepImpl {
 
         @Override
         public String getFunctionName() {
-            return "withKubernetesPod";
+            return "buildImage";
         }
 
         @Override
         public String getDisplayName() {
-            return "Run build steps as a Kubernetes Pod";
+            return "Builds a Docker Image";
         }
 
         @Override
         public boolean takesImplicitBlockArgument() {
-            return true;
+            return false;
         }
 
         @Override
