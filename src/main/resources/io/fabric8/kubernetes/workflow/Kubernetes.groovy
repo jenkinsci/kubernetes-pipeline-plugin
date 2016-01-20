@@ -36,7 +36,11 @@ class Kubernetes implements Serializable {
     }
 
     public Pod pod(String name) {
-        return new Pod(this, name, null, null, false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>());
+        return new Pod(this, name, null, null, false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>());
+    }
+
+    public Image image() {
+        return new Image(this);
     }
 
     public static class Pod implements Serializable {
@@ -47,9 +51,10 @@ class Kubernetes implements Serializable {
         private final Boolean privileged;
         private final Map secrets;
         private final Map hostPathMounts;
+        private final Map emptyDirs;
         private final Map env;
 
-        Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> env) {
+        Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> env) {
             this.kubernetes = kubernetes
             this.name = name
             this.image = image
@@ -57,50 +62,168 @@ class Kubernetes implements Serializable {
             this.privileged = privileged
             this.secrets = secrets
             this.hostPathMounts = hostPathMounts
+            this.emptyDirs = emptyDirs
             this.env = env;
         }
 
         public Pod withName(String name) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withImage(String image) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withServiceAccount(String serviceAccount) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withPrivileged(Boolean privileged) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withSecret(String secretName, String mountPath) {
             Map<String, String> newSecrets = new HashMap<>(secrets);
             newSecrets.put(secretName, mountPath);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, newSecrets, hostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, newSecrets, hostPathMounts, emptyDirs, env);
         }
 
         public Pod withHostPathMount(String hostPath, String mountPath) {
             Map<String, String> newHostPathMounts = new HashMap<>(secrets);
             newHostPathMounts.put(hostPath, mountPath);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, emptyDirs, env);
         }
 
+        public Pod withEmptyDir(String mountPath) {
+            return withEmptyDir(mountPath, null);
+        }
+
+        public Pod withEmptyDir(String mountPath, String medium) {
+            Set<String> newEmptyDirs = new HashSet<>(emptyDirs);
+            newEmptyDirs.put(emptyDir, medium);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, env);
+        }
 
         public Pod withEnvVar(String key, String value) {
             Map<String, String> newEnv = new HashMap<>(secrets);
             newEnv.put(key, value);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEnv);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newEnv);
         }
 
         public <V> V inside(Closure<V> body) {
             kubernetes.node {
-                kubernetes.script.withKubernetesPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, env: env) {
+                kubernetes.script.withKubernetesPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, emptyDirs: emptyDirs, env: env) {
                     body()
                 }
             }
+        }
+    }
+
+    public static class Image implements Serializable {
+
+        private final Kubernetes kubernetes;
+
+        Image(Kubernetes kubernetes) {
+            this.kubernetes = kubernetes
+        }
+
+        NamedImage withName(String name) {
+            return new NamedImage(kubernetes, name);
+        }
+
+     }
+
+    private static class NamedImage implements Serializable {
+
+        private final Kubernetes kubernetes;
+        private final String name;
+
+        NamedImage(Kubernetes kubernetes, String name) {
+            this.kubernetes = kubernetes
+            this.name = name
+        }
+
+
+        BuildImage build() {
+            return new BuildImage(kubernetes, name, false);
+        }
+
+        PushImage push() {
+            return new PushImage(kubernetes, name, null, false);
+        }
+
+        void tag() {
+            new TagImage(kubernetes, name, null, null);
+        }
+    }
+
+    private static class BuildImage implements Serializable {
+        private final Kubernetes kubernetes;
+        private final String name;
+        private final Boolean rm;
+
+        BuildImage(Kubernetes kubernetes, String name, Boolean rm) {
+            this.kubernetes = kubernetes
+            this.name = name
+            this.rm = rm
+        }
+
+        BuildImage removingIntermediate() {
+            return new BuildImage(kubernetes, name, true);
+        }
+
+        void fromPath(String path) {
+            kubernetes.script.buildImage(name: name, rm: rm, path: path);
+        }
+
+    }
+
+    private static class TagImage implements Serializable {
+        private final Kubernetes kubernetes;
+        private final String name;
+        private final String repo;
+        private final String tagName;
+
+        TagImage(Kubernetes kubernetes, String name, String repo, String tagName) {
+            this.kubernetes = kubernetes
+            this.name = name
+            this.repo = repo
+            this.tagName = tagName
+        }
+
+        TagImage inRepository(String repo) {
+            return new TagImage(kubernetes, name, repo, tagName);
+        }
+
+        TagImage withTag(String tagName) {
+            return kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName);
+        }
+    }
+
+    private static class PushImage implements Serializable {
+        private final Kubernetes kubernetes;
+        private final String name;
+        private final String tagName;
+        private final Boolean force;
+
+
+        PushImage(Kubernetes kubernetes, String name, String tagName, Boolean force) {
+            this.kubernetes = kubernetes;
+            this.name = name;
+            this.tagName = tagName;
+            this.force = force
+        }
+
+        PushImage force() {
+            return new PushImage(kubernetes, name, tagName, true);
+        }
+
+        PushImage withTag(String tagName) {
+            return new PushImage(kubernetes, name, tagName, force);
+        }
+
+        void toRegistry() {
+            kubernetes.script.pushImage(name: name, force: force, tagName: tagName);
         }
     }
 

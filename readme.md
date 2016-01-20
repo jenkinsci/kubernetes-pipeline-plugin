@@ -17,28 +17,52 @@ Kubernetes Workflow is Jenkins plugin which extends [Jenkins Workflow](https://g
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
     }
-
+    
+    
 ### Using environment variables
 
     kubernetes.pod('buildpod').withImage('maven').withEnvVar('DOCKER_CONFIG','/home/jenkins/.docker/').inside {      
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
-    }
+    }    
+     
+### Using Volumes
 
-### Using secrets
+Currently the following volume types are supported:
+       
+- Secrets
+- Host Path
+- Empty Dir
+        
+#### Using secrets
 
     kubernetes.pod('buildpod').withImage('maven').withSecret('gpg-key','/home/jenkins/.gnupg').inside {      
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
     }    
 
-### Using host path mounts
-
+#### Using host path mounts
+    
     kubernetes.pod('buildpod').withImage('maven').withHostPathMount('/path/on/host', '/path/on/container').inside {      
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
-    }    
+    }  
+      
+#### Using empty Dir mounts
+    
+    kubernetes.pod('buildpod').withImage('maven').withEmptyDir('/path/on/container').inside {      
+        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        sh 'mvn clean install'
+    }     
+         
+This also supports specifying the medium (e.g. "Memory")
 
+         
+    kubernetes.pod('buildpod').withImage('maven').withEmptyDir('/path/on/container', 'Memory').inside {      
+        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        sh 'mvn clean install'
+    }                
+    
 ### Using privileged containers
 
     kubernetes.pod('buildpod').withImage('maven').withPrivileged(true).inside {      

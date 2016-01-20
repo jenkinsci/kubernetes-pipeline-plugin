@@ -1,0 +1,54 @@
+/*
+ * Copyright (C) 2015 Original Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.fabric8.kubernetes.workflow;
+
+import com.google.inject.Inject;
+import hudson.EnvVars;
+import hudson.FilePath;
+import hudson.model.TaskListener;
+import io.fabric8.docker.client.Config;
+import io.fabric8.docker.client.ConfigBuilder;
+import io.fabric8.docker.client.DefaultDockerClient;
+import io.fabric8.docker.client.DockerClient;
+import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
+import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+
+import java.util.concurrent.CountDownLatch;
+
+public class TagImageStepExecution extends AbstractSynchronousStepExecution<Boolean> {
+
+    @Inject
+    private transient TagImageStep step;
+
+    @StepContextParameter
+    private transient TaskListener listener;
+
+    @Override
+    protected Boolean run() throws Exception {
+        Config config = new ConfigBuilder().build();
+        DockerClient client = new DefaultDockerClient(config);
+
+        try {
+            return client.image()
+                    .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
+
+        } catch (Throwable t) {
+            t.printStackTrace(listener.getLogger());
+        }
+        return null; //Void
+    }
+}
