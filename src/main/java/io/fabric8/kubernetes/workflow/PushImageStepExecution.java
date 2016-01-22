@@ -50,7 +50,7 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                     .usingListener(new EventListener() {
                         @Override
                         public void onSuccess(String s) {
-                            listener.error(s);
+                            listener.getLogger().println(s);
                             pushFinished.countDown();
                         }
 
@@ -67,7 +67,6 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                     })
                     .withTag(step.getTagName())
                     .toRegistry();
-
             pushFinished.await(10, TimeUnit.MINUTES);
         } finally {
             if (handle != null) {
