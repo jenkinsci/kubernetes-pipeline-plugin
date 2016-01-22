@@ -19,8 +19,6 @@ package io.fabric8.kubernetes.workflow;
 import com.google.inject.Inject;
 import hudson.EnvVars;
 import hudson.FilePath;
-import hudson.model.Computer;
-import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.io.Archiver;
 import hudson.util.io.ArchiverFactory;
@@ -34,9 +32,11 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
@@ -47,13 +47,18 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Void> {
+
+    private static final transient Logger LOGGER = Logger.getLogger(BuildImageStepExecution.class.getName());
 
     @Inject
     private transient BuildImageStep step;
@@ -64,52 +69,22 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
 
     @Override
     protected Void run() throws Exception {
-        final CountDownLatch buildFinished = new CountDownLatch(1);
-        Config config = new ConfigBuilder().build();
-        DockerClient client = new DefaultDockerClient(config);
-        OutputHandle handle = null;
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        try (PipedInputStream pin = new PipedInputStream();
+             PipedOutputStream pout = new PipedOutputStream(pin)) {
 
-        try {
-            PipedInputStream pin = new PipedInputStream();
-            PipedOutputStream pout = new PipedOutputStream(pin);
-            Future<Boolean> tarFuture = executorService.submit(new CreateTarTask(pout));
-            handle = client.image().build()
-                    .withRepositoryName(step.getName())
-                    .removingIntermediateOnSuccess()
-                    .usingListener(new EventListener() {
-                        @Override
-                        public void onSuccess(String s) {
-                            listener.error(s);
-                            listener.getLogger().flush();
-                            buildFinished.countDown();
-                        }
+            Future<Boolean> createTarFuture = executorService.submit(new CreateTarTask(pout));
+            Future<Boolean> buildImageFuture = executorService.submit(new BuildImageTask(pin));
 
-                        @Override
-                        public void onError(String s) {
-                            listener.error(s);
-                            listener.getLogger().flush();
-                            buildFinished.countDown();
-                        }
-
-                        @Override
-                        public void onEvent(String s) {
-                            listener.getLogger().println(s);
-                            listener.getLogger().flush();
-                        }
-
-                    })
-                    .fromTar(pin);
-            listener.getLogger().flush();
-
-            tarFuture.get(2, TimeUnit.MINUTES);
-            buildFinished.await(5, TimeUnit.MINUTES);
-        } catch (Throwable t) {
-            t.printStackTrace(listener.getLogger());
-        } finally {
-            if (handle != null) {
-                handle.close();
+            //Wait for the two tasks to complete.
+            if (!createTarFuture.get(2, TimeUnit.MINUTES)) {
+                listener.getLogger().println("Timed out creating docker image tarball.");
+            } else if (buildImageFuture.get(7, TimeUnit.MINUTES)) {
+                listener.getLogger().println("Timed out building docker image.");
+            } else {
+                listener.getLogger().println("Image Build Successfully");
             }
+        } finally {
             executorService.shutdown();
             if (executorService.awaitTermination(30, TimeUnit.SECONDS)) {
                 executorService.shutdownNow();
@@ -117,6 +92,61 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
         }
 
         return null; //Void
+    }
+
+    private class BuildImageTask implements Callable<Boolean> {
+
+        private final InputStream inputStream;
+
+        private BuildImageTask(InputStream inputStream) {
+            this.inputStream = inputStream;
+        }
+
+        @Override
+        public Boolean call() throws Exception {
+            OutputHandle handle = null;
+            try {
+                LOGGER.info("Start of BuildImageTask");
+                Config config = new ConfigBuilder().build();
+                DockerClient client = new DefaultDockerClient(config);
+                final CountDownLatch buildFinished = new CountDownLatch(1);
+                handle = client.image().build()
+                        .withRepositoryName(step.getName())
+                        .removingIntermediateOnSuccess()
+                        .usingListener(new EventListener() {
+                            @Override
+                            public void onSuccess(String s) {
+                                LOGGER.info("BuildImageTask Success:" + s);
+                                listener.getLogger().println(s);
+                                buildFinished.countDown();
+                            }
+
+                            @Override
+                            public void onError(String s) {
+                                LOGGER.info("BuildImageTask Error:" + s);
+                                listener.error(s);
+                                buildFinished.countDown();
+                            }
+
+                            @Override
+                            public void onEvent(String s) {
+                                LOGGER.info("BuildImageTask Event:" + s);
+                                listener.getLogger().println(s);
+                            }
+
+                        }).fromTar(inputStream);
+
+                return buildFinished.await(5, TimeUnit.MINUTES);
+            } catch (Throwable t) {
+                listener.error(t.getMessage());
+                return false;
+            } finally {
+                LOGGER.info("End of BuildImageTask");
+                if (handle != null) {
+                    handle.close();
+                }
+            }
+        }
     }
 
     private class CreateTarTask implements Callable<Boolean> {
@@ -128,12 +158,18 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
 
         @Override
         public Boolean call() throws Exception {
+            LOGGER.info("Start of BuildImageTask");
             try {
+                listener.getLogger().printf("Creating tar from path: %s.", step.getPath());
                 workspace.child(step.getPath()).archive(new DockerArchiverFactory(), outputStream, new TrueFileFilter());
+                outputStream.flush();
+                outputStream.close();
                 return true;
             } catch (Throwable t) {
                 listener.error(t.getMessage());
                 return false;
+            } finally {
+                LOGGER.info("End of BuildImageTask");
             }
         }
     }

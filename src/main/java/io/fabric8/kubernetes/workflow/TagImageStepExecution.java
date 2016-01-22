@@ -17,8 +17,6 @@
 package io.fabric8.kubernetes.workflow;
 
 import com.google.inject.Inject;
-import hudson.EnvVars;
-import hudson.FilePath;
 import hudson.model.TaskListener;
 import io.fabric8.docker.client.Config;
 import io.fabric8.docker.client.ConfigBuilder;
@@ -26,8 +24,6 @@ import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-
-import java.util.concurrent.CountDownLatch;
 
 public class TagImageStepExecution extends AbstractSynchronousStepExecution<Boolean> {
 
@@ -41,14 +37,7 @@ public class TagImageStepExecution extends AbstractSynchronousStepExecution<Bool
     protected Boolean run() throws Exception {
         Config config = new ConfigBuilder().build();
         DockerClient client = new DefaultDockerClient(config);
-
-        try {
-            return client.image()
-                    .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
-
-        } catch (Throwable t) {
-            t.printStackTrace(listener.getLogger());
-        }
-        return null; //Void
+        return client.image()
+                .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
     }
 }
