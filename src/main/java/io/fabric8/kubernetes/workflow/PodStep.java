@@ -22,10 +22,13 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-public class PodStep extends AbstractStepImpl {
+public class PodStep extends AbstractStepImpl implements Serializable {
+
+    private static final long serialVersionUID = 5588861066775717487L;
 
     private final String name;
     private final String image;

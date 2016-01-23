@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 
 import static io.fabric8.kubernetes.workflow.Constants.EXIT;
 import static io.fabric8.kubernetes.workflow.Constants.FAILED_PHASE;
@@ -53,10 +54,13 @@ import static io.fabric8.kubernetes.workflow.Constants.VOLUME_PREFIX;
 
 public final class KubernetesFacade implements Closeable {
 
+    private static final transient Logger LOGGER = Logger.getLogger(KubernetesFacade.class.getName());
+
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
     public Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, String workspace, List<EnvVar> env, String cmd) {
+        LOGGER.info("Creating pod with name:" + name);
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
 
@@ -146,8 +150,9 @@ public final class KubernetesFacade implements Closeable {
         return p;
     }
 
-    public Boolean deletePod(String podName) {
-        if (client.pods().withName(podName).delete()) {
+    public Boolean deletePod(String name) {
+        LOGGER.info("Deleting pod with name:" + name);
+        if (client.pods().withName(name).delete()) {
             synchronized (closeables) {
                 for (Closeable c : closeables) {
                     closeQuietly(c);
