@@ -138,7 +138,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
 
                 return buildFinished.await(5, TimeUnit.MINUTES);
             } catch (Throwable t) {
-                listener.error(t.getMessage());
+                t.printStackTrace(listener.getLogger());
                 return false;
             } finally {
                 LOGGER.info("End of BuildImageTask");
@@ -166,7 +166,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
                 outputStream.close();
                 return true;
             } catch (Throwable t) {
-                listener.error(t.getMessage());
+                t.printStackTrace(listener.getLogger());
                 return false;
             } finally {
                 LOGGER.info("End of BuildImageTask");
