@@ -36,8 +36,9 @@ public class TagImageStepExecution extends AbstractSynchronousStepExecution<Bool
     @Override
     protected Boolean run() throws Exception {
         Config config = new ConfigBuilder().build();
-        DockerClient client = new DefaultDockerClient(config);
-        return client.image()
-                .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
+        try (DockerClient client = new DefaultDockerClient(config)) {
+            return client.image()
+                    .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
+        }
     }
 }

@@ -47,9 +47,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -77,12 +75,10 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
             Future<Boolean> buildImageFuture = executorService.submit(new BuildImageTask(pin));
 
             //Wait for the two tasks to complete.
-            if (!createTarFuture.get(2, TimeUnit.MINUTES)) {
-                listener.getLogger().println("Timed out creating docker image tarball.");
-            } else if (!buildImageFuture.get(7, TimeUnit.MINUTES)) {
-                listener.getLogger().println("Timed out building docker image.");
-            } else {
-                listener.getLogger().println("Image Build Successfully");
+            if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
+                listener.getLogger().println("Timed out (" + step.getTimeout()+"ms)creating docker image tarball." );
+            } else if (!buildImageFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
+                listener.getLogger().println("Timed out (" + step.getTimeout()+"ms)building docker image.");
             }
         } finally {
             executorService.shutdown();
@@ -105,10 +101,9 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
         @Override
         public Boolean call() throws Exception {
             OutputHandle handle = null;
-            try {
+            Config config = new ConfigBuilder().build();
+            try (DockerClient client = new DefaultDockerClient(config)) {
                 LOGGER.info("Start of BuildImageTask");
-                Config config = new ConfigBuilder().build();
-                DockerClient client = new DefaultDockerClient(config);
                 final CountDownLatch buildFinished = new CountDownLatch(1);
                 handle = client.image().build()
                         .withRepositoryName(step.getName())
@@ -136,7 +131,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
 
                         }).fromTar(inputStream);
 
-                return buildFinished.await(5, TimeUnit.MINUTES);
+                return buildFinished.await(step.getTimeout(), TimeUnit.MILLISECONDS);
             } catch (Throwable t) {
                 t.printStackTrace(listener.getLogger());
                 return false;
@@ -145,6 +140,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
                 if (handle != null) {
                     handle.close();
                 }
+
             }
         }
     }

@@ -29,12 +29,14 @@ public class BuildImageStep extends AbstractStepImpl {
     private final String name;
     private final Boolean rm;
     private final String path;
+    private final long timeout;
 
     @DataBoundConstructor
-    public BuildImageStep(String name, Boolean rm, String path) {
+    public BuildImageStep(String name, Boolean rm, String path, long timeout) {
         this.name = name;
         this.rm = rm;
         this.path = path;
+        this.timeout = timeout;
     }
 
     public String getName() {
@@ -47,6 +49,10 @@ public class BuildImageStep extends AbstractStepImpl {
 
     public String getPath() {
         return path;
+    }
+
+    public long getTimeout() {
+        return timeout;
     }
 
     @Extension

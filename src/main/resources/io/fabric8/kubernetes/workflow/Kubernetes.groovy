@@ -145,11 +145,11 @@ class Kubernetes implements Serializable {
 
 
         BuildImage build() {
-            return new BuildImage(kubernetes, name, false);
+            return new BuildImage(kubernetes, name, false, 600000L);
         }
 
         PushImage push() {
-            return new PushImage(kubernetes, name, null, false);
+            return new PushImage(kubernetes, name, null, false, 600000L);
         }
 
         void tag() {
@@ -158,24 +158,29 @@ class Kubernetes implements Serializable {
     }
 
     private static class BuildImage implements Serializable {
-        private final Kubernetes kubernetes;
-        private final String name;
-        private final Boolean rm;
+        private final Kubernetes kubernetes
+        private final String name
+        private final Boolean rm
+        private final long timeout
 
-        BuildImage(Kubernetes kubernetes, String name, Boolean rm) {
+        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout) {
             this.kubernetes = kubernetes
             this.name = name
             this.rm = rm
+            this.timeout = timeout
         }
 
         BuildImage removingIntermediate() {
-            return new BuildImage(kubernetes, name, true);
+            return new BuildImage(kubernetes, name, true, timeout);
+        }
+
+        BuildImage withTimeout(long timeout) {
+            return new BuildImage(kubernetes, name, rm, timeout);
         }
 
         void fromPath(String path) {
-            kubernetes.script.buildImage(name: name, rm: rm, path: path);
+            kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout);
         }
-
     }
 
     private static class TagImage implements Serializable {
@@ -205,25 +210,31 @@ class Kubernetes implements Serializable {
         private final String name;
         private final String tagName;
         private final Boolean force;
+        private final long timeout;
 
 
-        PushImage(Kubernetes kubernetes, String name, String tagName, Boolean force) {
-            this.kubernetes = kubernetes;
-            this.name = name;
-            this.tagName = tagName;
+        PushImage(Kubernetes kubernetes, String name, String tagName, Boolean force, long timeout) {
+            this.kubernetes = kubernetes
+            this.name = name
+            this.tagName = tagName
             this.force = force
+            this.timeout = timeout
         }
 
         PushImage force() {
-            return new PushImage(kubernetes, name, tagName, true);
+            return new PushImage(kubernetes, name, tagName, true, timeout);
         }
 
         PushImage withTag(String tagName) {
-            return new PushImage(kubernetes, name, tagName, force);
+            return new PushImage(kubernetes, name, tagName, force, timeout);
+        }
+
+        PushImage withTimeout(long timeout) {
+            return new PushImage(kubernetes, name, tagName, force, timeout);
         }
 
         void toRegistry() {
-            kubernetes.script.pushImage(name: name, force: force, tagName: tagName);
+            kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout);
         }
     }
 
