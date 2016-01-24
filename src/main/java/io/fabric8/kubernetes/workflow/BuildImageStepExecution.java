@@ -79,7 +79,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
             //Wait for the two tasks to complete.
             if (!createTarFuture.get(2, TimeUnit.MINUTES)) {
                 listener.getLogger().println("Timed out creating docker image tarball.");
-            } else if (buildImageFuture.get(7, TimeUnit.MINUTES)) {
+            } else if (!buildImageFuture.get(7, TimeUnit.MINUTES)) {
                 listener.getLogger().println("Timed out building docker image.");
             } else {
                 listener.getLogger().println("Image Build Successfully");
@@ -138,7 +138,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
 
                 return buildFinished.await(5, TimeUnit.MINUTES);
             } catch (Throwable t) {
-                listener.error(t.getMessage());
+                t.printStackTrace(listener.getLogger());
                 return false;
             } finally {
                 LOGGER.info("End of BuildImageTask");
@@ -166,7 +166,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
                 outputStream.close();
                 return true;
             } catch (Throwable t) {
-                listener.error(t.getMessage());
+                t.printStackTrace(listener.getLogger());
                 return false;
             } finally {
                 LOGGER.info("End of BuildImageTask");
