@@ -66,8 +66,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             throw new AbortException("Supply file and target environment");
         }
 
-        try {
-            KubernetesClient kubernetes = new DefaultKubernetesClient();
+        try (KubernetesClient kubernetes = new DefaultKubernetesClient()) {
             Controller controller = new Controller(kubernetes);
             controller.setThrowExceptionOnError(true);
             controller.setRecreateMode(false);
