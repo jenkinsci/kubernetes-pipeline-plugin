@@ -42,9 +42,8 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
     @Override
     protected Void run() throws Exception {
         final CountDownLatch pushFinished = new CountDownLatch(1);
-        DockerClient client = new DefaultDockerClient();
         OutputHandle handle = null;
-        try {
+        try (DockerClient client = new DefaultDockerClient()) {
             handle = client.image().withName(step.getName())
                     .push()
                     .usingListener(new EventListener() {
@@ -67,7 +66,9 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                     })
                     .withTag(step.getTagName())
                     .toRegistry();
-            pushFinished.await(10, TimeUnit.MINUTES);
+            if (!pushFinished.await(step.getTimeout(), TimeUnit.MINUTES)) {
+                listener.getLogger().println("Timed out (" + step.getTimeout()+"ms)pushing docker image.");
+            }
         } finally {
             if (handle != null) {
                 handle.close();

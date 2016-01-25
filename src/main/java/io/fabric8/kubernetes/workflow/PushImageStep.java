@@ -27,12 +27,14 @@ public class PushImageStep extends AbstractStepImpl {
     private final String name;
     private final String tagName;
     private final Boolean force;
+    private final long timeout;
 
     @DataBoundConstructor
-    public PushImageStep(String name, String tagName, Boolean force) {
+    public PushImageStep(String name, String tagName, Boolean force, long timeout) {
         this.name = name;
         this.tagName = tagName;
         this.force = force;
+        this.timeout = timeout;
     }
 
     public String getName() {
@@ -45,6 +47,10 @@ public class PushImageStep extends AbstractStepImpl {
 
     public Boolean getForce() {
         return force;
+    }
+
+    public long getTimeout() {
+        return timeout;
     }
 
     @Extension

@@ -36,8 +36,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 
 public class PodStepExecution extends AbstractStepExecutionImpl {
+
+    private static final transient Logger LOGGER = Logger.getLogger(PodStepExecution.class.getName());
 
     @Inject
     private PodStep step;
@@ -54,25 +57,26 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         final AtomicBoolean podAlive = new AtomicBoolean(false);
         final CountDownLatch podStarted = new CountDownLatch(1);
         final CountDownLatch podFinished = new CountDownLatch(1);
-        KubernetesFacade kubernetes = new KubernetesFacade();
+        try (KubernetesFacade kubernetes = new KubernetesFacade()) {
 
-        kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getEmptyDirs(), step.getHostPathMounts(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
-        kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
-        podStarted.await();
+            kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getEmptyDirs(), step.getHostPathMounts(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
+            kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
+            podStarted.await();
 
-       context.newBodyInvoker()
-                .withContext(BodyInvoker
-                .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, podAlive, podStarted, podFinished)))
-                .withCallback(new PodCallback(podName)).start();
+            context.newBodyInvoker()
+                    .withContext(BodyInvoker
+                            .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, podAlive, podStarted, podFinished)))
+                    .withCallback(new PodCallback(podName)).start();
 
+        }
         return false;
     }
 
     @Override
     public void stop(Throwable cause) throws Exception {
-        KubernetesFacade kubernetes = new KubernetesFacade();
-        kubernetes.deletePod(podName);
-        kubernetes.close();
+        try (KubernetesFacade kubernetes = new KubernetesFacade()) {
+            kubernetes.deletePod(podName);
+        }
     }
 
     private List<EnvVar> createPodEnv(Map<String,String> env) throws IOException, InterruptedException {
@@ -100,8 +104,10 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            try {
-                new KubernetesFacade().deletePod(podName);
+            try (KubernetesFacade kubernetes = new KubernetesFacade()) {
+                kubernetes.deletePod(podName);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to cleanup pod:" + podName);
             } finally {
                 context.onSuccess(result);
             }
@@ -109,8 +115,10 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            try {
-                new KubernetesFacade().deletePod(podName);
+            try (KubernetesFacade kubernetes = new KubernetesFacade()) {
+                kubernetes.deletePod(podName);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to cleanup pod:" + podName);
             } finally {
                 context.onFailure(t);
             }
