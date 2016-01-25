@@ -73,7 +73,7 @@ public class PodWatcher implements Watcher<Pod> {
             try {
                 onCompletion.call();
             } catch (Throwable t) {
-                //ingore
+                //ignore
             }
         }
     }
