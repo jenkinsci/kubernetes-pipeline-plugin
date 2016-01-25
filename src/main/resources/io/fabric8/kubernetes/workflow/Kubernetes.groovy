@@ -336,11 +336,9 @@ class Kubernetes implements Serializable {
         public Apply withRollingUpgradePreserveScale(Boolean rollingUpgradePreserveScale) {
             return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
         }
-        public <V> V apply(Closure<V> body) {
+        public void apply() {
             kubernetes.node {
-                kubernetes.script.withKubernetesApply(file: file, environment: environment, createNewResources: createNewResources, servicesOnly: servicesOnly, ignoreServices: ignoreServices, ignoreRunningOAuthClients: ignoreRunningOAuthClients, processTemplatesLocally: processTemplatesLocally, deletePodsOnReplicationControllerUpdate: deletePodsOnReplicationControllerUpdate, rollingUpgrades: rollingUpgrades, rollingUpgradePreserveScale: rollingUpgradePreserveScale) {
-                    body()
-                }
+                kubernetes.script.kubernetesApply(file: file, environment: environment, createNewResources: createNewResources, servicesOnly: servicesOnly, ignoreServices: ignoreServices, ignoreRunningOAuthClients: ignoreRunningOAuthClients, processTemplatesLocally: processTemplatesLocally, deletePodsOnReplicationControllerUpdate: deletePodsOnReplicationControllerUpdate, rollingUpgrades: rollingUpgrades, rollingUpgradePreserveScale: rollingUpgradePreserveScale)
             }
         }
     }
