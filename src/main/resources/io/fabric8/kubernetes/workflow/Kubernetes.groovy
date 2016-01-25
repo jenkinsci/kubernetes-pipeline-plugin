@@ -179,7 +179,9 @@ class Kubernetes implements Serializable {
         }
 
         void fromPath(String path) {
-            kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout);
+            kubernetes.node {
+                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout);
+            }
         }
     }
 
@@ -200,8 +202,10 @@ class Kubernetes implements Serializable {
             return new TagImage(kubernetes, name, repo, tagName);
         }
 
-        TagImage withTag(String tagName) {
-            return kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName);
+        void withTag(String tagName) {
+            kubernetes.node {
+                kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName);
+            }
         }
     }
 
@@ -234,7 +238,9 @@ class Kubernetes implements Serializable {
         }
 
         void toRegistry() {
-            kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout);
+            kubernetes.node {
+                kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout);
+            }
         }
     }
 
