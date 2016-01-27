@@ -46,11 +46,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -76,9 +77,9 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
 
             //Wait for the two tasks to complete.
             if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
-                listener.getLogger().println("Timed out (" + step.getTimeout()+"ms)creating docker image tarball." );
+                listener.getLogger().println("Failed to create docker image tarball.");
             } else if (!buildImageFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
-                listener.getLogger().println("Timed out (" + step.getTimeout()+"ms)building docker image.");
+                listener.getLogger().println("Failed to build docker image.");
             }
         } finally {
             executorService.shutdown();
@@ -103,44 +104,42 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
             OutputHandle handle = null;
             Config config = new ConfigBuilder().build();
             try (DockerClient client = new DefaultDockerClient(config)) {
-                LOGGER.info("Start of BuildImageTask");
-                final CountDownLatch buildFinished = new CountDownLatch(1);
+                final BlockingQueue queue = new LinkedBlockingQueue();
+                listener.getLogger().println("Building image:" + step.getName() + " from path:" + step.getPath() + ".");
                 handle = client.image().build()
                         .withRepositoryName(step.getName())
                         .removingIntermediateOnSuccess()
                         .usingListener(new EventListener() {
                             @Override
                             public void onSuccess(String s) {
-                                LOGGER.info("BuildImageTask Success:" + s);
                                 listener.getLogger().println(s);
-                                buildFinished.countDown();
+                                queue.add(true);
                             }
 
                             @Override
                             public void onError(String s) {
-                                LOGGER.info("BuildImageTask Error:" + s);
-                                listener.error(s);
-                                buildFinished.countDown();
+                                queue.add(new RuntimeException("Failed to build image. Error:" + s));
                             }
 
                             @Override
                             public void onEvent(String s) {
-                                LOGGER.info("BuildImageTask Event:" + s);
                                 listener.getLogger().println(s);
                             }
 
                         }).fromTar(inputStream);
 
-                return buildFinished.await(step.getTimeout(), TimeUnit.MILLISECONDS);
-            } catch (Throwable t) {
-                t.printStackTrace(listener.getLogger());
-                return false;
+                Object result = queue.poll(step.getTimeout(), TimeUnit.MILLISECONDS);
+                if (result == null) {
+                    throw new RuntimeException("Timed out (" + step.getTimeout() + "ms)building docker image.");
+                } else if (result instanceof Throwable) {
+                    throw new RuntimeException((Throwable) result);
+                } else {
+                    return true;
+                }
             } finally {
-                LOGGER.info("End of BuildImageTask");
                 if (handle != null) {
                     handle.close();
                 }
-
             }
         }
     }
@@ -154,7 +153,6 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
 
         @Override
         public Boolean call() throws Exception {
-            LOGGER.info("Start of BuildImageTask");
             try {
                 listener.getLogger().printf("Creating tar from path: %s.", step.getPath());
                 workspace.child(step.getPath()).archive(new DockerArchiverFactory(), outputStream, new TrueFileFilter());
@@ -164,8 +162,6 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
             } catch (Throwable t) {
                 t.printStackTrace(listener.getLogger());
                 return false;
-            } finally {
-                LOGGER.info("End of BuildImageTask");
             }
         }
     }

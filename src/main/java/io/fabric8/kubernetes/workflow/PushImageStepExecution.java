@@ -22,13 +22,12 @@ import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
 import io.fabric8.docker.dsl.EventListener;
 import io.fabric8.docker.dsl.OutputHandle;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
 import javax.inject.Inject;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class PushImageStepExecution extends AbstractSynchronousStepExecution<Void> {
@@ -41,8 +40,9 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
 
     @Override
     protected Void run() throws Exception {
-        final CountDownLatch pushFinished = new CountDownLatch(1);
         OutputHandle handle = null;
+        final BlockingQueue queue = new LinkedBlockingQueue();
+        listener.getLogger().println("Pushing image:" + step.getName() + " to docker registry.");
         try (DockerClient client = new DefaultDockerClient()) {
             handle = client.image().withName(step.getName())
                     .push()
@@ -50,13 +50,13 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                         @Override
                         public void onSuccess(String s) {
                             listener.getLogger().println(s);
-                            pushFinished.countDown();
+                            queue.add(true);
                         }
 
                         @Override
                         public void onError(String s) {
                             listener.error(s);
-                            pushFinished.countDown();
+                            queue.add(new RuntimeException("Failed to push image. Error:" + s));
                         }
 
                         @Override
@@ -66,8 +66,12 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                     })
                     .withTag(step.getTagName())
                     .toRegistry();
-            if (!pushFinished.await(step.getTimeout(), TimeUnit.MINUTES)) {
-                listener.getLogger().println("Timed out (" + step.getTimeout()+"ms)pushing docker image.");
+
+            Object result = queue.poll(step.getTimeout(), TimeUnit.MILLISECONDS);
+            if (result == null) {
+                throw new RuntimeException("Timed out (" + step.getTimeout()+"ms)pushing docker image.");
+            } else if (result instanceof Throwable) {
+                throw new RuntimeException((Throwable) result);
             }
         } finally {
             if (handle != null) {
