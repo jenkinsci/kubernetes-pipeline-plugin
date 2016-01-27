@@ -102,8 +102,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
         @Override
         public Boolean call() throws Exception {
             OutputHandle handle = null;
-            Config config = new ConfigBuilder().build();
-            try (DockerClient client = new DefaultDockerClient(config)) {
+            try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
                 final BlockingQueue queue = new LinkedBlockingQueue();
                 listener.getLogger().println("Building image:" + step.getName() + " from path:" + step.getPath() + ".");
                 handle = client.image().build()

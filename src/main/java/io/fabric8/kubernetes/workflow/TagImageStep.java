@@ -22,21 +22,16 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-public class TagImageStep extends AbstractStepImpl {
+public class TagImageStep extends AbstractDockerStep {
 
-    private final String name;
     private final String repo;
     private final String tagName;
 
     @DataBoundConstructor
-    public TagImageStep(String name, String repo, String tagName) {
-        this.name = name;
+    public TagImageStep(String name, String repo, String tagName, String username, String password, String email) {
+        super(name, username, password, email);
         this.repo = repo;
         this.tagName = tagName;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public String getRepo() {

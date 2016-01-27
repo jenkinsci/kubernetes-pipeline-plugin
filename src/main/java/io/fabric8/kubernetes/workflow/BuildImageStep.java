@@ -24,23 +24,25 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.Map;
 
-public class BuildImageStep extends AbstractStepImpl {
+public class BuildImageStep extends AbstractDockerStep {
 
-    private final String name;
     private final Boolean rm;
     private final String path;
     private final long timeout;
 
     @DataBoundConstructor
-    public BuildImageStep(String name, Boolean rm, String path, long timeout) {
-        this.name = name;
+    public BuildImageStep(String name, Boolean rm, String path, long timeout, String username, String password, String email) {
+        super(name, username, password, email);
         this.rm = rm;
         this.path = path;
         this.timeout = timeout;
     }
 
-    public String getName() {
-        return name;
+    public BuildImageStep(String name, String username, String password, String email, Boolean rm, String path, long timeout) {
+        super(name, username, password, email);
+        this.rm = rm;
+        this.path = path;
+        this.timeout = timeout;
     }
 
     public Boolean getRm() {

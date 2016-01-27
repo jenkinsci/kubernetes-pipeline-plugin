@@ -43,7 +43,7 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
         OutputHandle handle = null;
         final BlockingQueue queue = new LinkedBlockingQueue();
         listener.getLogger().println("Pushing image:" + step.getName() + " to docker registry.");
-        try (DockerClient client = new DefaultDockerClient()) {
+        try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
             handle = client.image().withName(step.getName())
                     .push()
                     .usingListener(new EventListener() {
