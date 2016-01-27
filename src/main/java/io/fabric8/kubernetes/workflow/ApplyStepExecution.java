@@ -79,7 +79,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             controller.setRollingUpgrade(step.getRollingUpgrades());
             controller.setRollingUpgradePreserveScale(step.getRollingUpgradePreserveScale());
 
-
             boolean openShift = KubernetesHelper.isOpenShift(kubernetes);
             if (!openShift) {
                 listener.error("Disabling openshift features has not been implemeted yet");

@@ -145,15 +145,15 @@ class Kubernetes implements Serializable {
 
 
         BuildImage build() {
-            return new BuildImage(kubernetes, name, false, 600000L);
+            return new BuildImage(kubernetes, name, false, 600000L, null, null, null);
         }
 
         PushImage push() {
-            return new PushImage(kubernetes, name, null, false, 600000L);
+            return new PushImage(kubernetes, name, null, false, 600000L, null, null, null);
         }
 
         void tag() {
-            new TagImage(kubernetes, name, null, null);
+            new TagImage(kubernetes, name, null, null, null, null, null);
         }
     }
 
@@ -162,25 +162,43 @@ class Kubernetes implements Serializable {
         private final String name
         private final Boolean rm
         private final long timeout
+        private final String username
+        private final String password
+        private final String email
 
-        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout) {
+        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout, String username, String password, String email) {
             this.kubernetes = kubernetes
             this.name = name
             this.rm = rm
             this.timeout = timeout
+            this.username = username
+            this.password = password
+            this.email = email
         }
 
         BuildImage removingIntermediate() {
-            return new BuildImage(kubernetes, name, true, timeout);
+            return new BuildImage(kubernetes, name, true, timeout, username, password, email);
         }
 
         BuildImage withTimeout(long timeout) {
-            return new BuildImage(kubernetes, name, rm, timeout);
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+        }
+
+        BuildImage withUsername(String username) {
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+        }
+
+        BuildImage withPassword(String password) {
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+        }
+
+        BuildImage withEmail(String email) {
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
         }
 
         void fromPath(String path) {
             kubernetes.node {
-                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout);
+                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email);
             }
         }
     }
@@ -190,21 +208,39 @@ class Kubernetes implements Serializable {
         private final String name;
         private final String repo;
         private final String tagName;
+        private final String username
+        private final String password
+        private final String email
 
-        TagImage(Kubernetes kubernetes, String name, String repo, String tagName) {
+        TagImage(Kubernetes kubernetes, String name, String repo, String tagName, String username, String password, String email) {
             this.kubernetes = kubernetes
             this.name = name
             this.repo = repo
             this.tagName = tagName
+            this.username = username
+            this.password = password
+            this.email = email
         }
 
         TagImage inRepository(String repo) {
-            return new TagImage(kubernetes, name, repo, tagName);
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
+        }
+
+        TagImage withUsername(String username) {
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
+        }
+
+        TagImage withPassword(String password) {
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
+        }
+
+        TagImage withEmail(String email) {
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
         }
 
         void withTag(String tagName) {
             kubernetes.node {
-                kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName);
+                kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName, username: username, password: password, email: email);
             }
         }
     }
@@ -215,31 +251,50 @@ class Kubernetes implements Serializable {
         private final String tagName;
         private final Boolean force;
         private final long timeout;
+        private final String username
+        private final String password
+        private final String email
 
 
-        PushImage(Kubernetes kubernetes, String name, String tagName, Boolean force, long timeout) {
+
+        PushImage(Kubernetes kubernetes, String name, String tagName, Boolean force, long timeout, String username, String password, String email) {
             this.kubernetes = kubernetes
             this.name = name
             this.tagName = tagName
             this.force = force
             this.timeout = timeout
+            this.username = username
+            this.password = password
+            this.email = email
         }
 
         PushImage force() {
-            return new PushImage(kubernetes, name, tagName, true, timeout);
+            return new PushImage(kubernetes, name, tagName, true, timeout, username, password, email);
         }
 
         PushImage withTag(String tagName) {
-            return new PushImage(kubernetes, name, tagName, force, timeout);
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
         }
 
         PushImage withTimeout(long timeout) {
-            return new PushImage(kubernetes, name, tagName, force, timeout);
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+        }
+
+        PushImage withUsername(String username) {
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+        }
+
+        PushImage withPassword(String password) {
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+        }
+
+        PushImage withEmail(String email) {
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
         }
 
         void toRegistry() {
             kubernetes.node {
-                kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout);
+                kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout, username: username, password: password, email: email);
             }
         }
     }

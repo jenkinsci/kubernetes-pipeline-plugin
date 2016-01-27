@@ -22,23 +22,18 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-public class PushImageStep extends AbstractStepImpl {
+public class PushImageStep extends AbstractDockerStep {
 
-    private final String name;
     private final String tagName;
     private final Boolean force;
     private final long timeout;
 
     @DataBoundConstructor
-    public PushImageStep(String name, String tagName, Boolean force, long timeout) {
-        this.name = name;
+    public PushImageStep(String name, String tagName, Boolean force, long timeout, String username, String password, String email) {
+        super(name, username, password, email);
         this.tagName = tagName;
         this.force = force;
         this.timeout = timeout;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public String getTagName() {
