@@ -22,7 +22,11 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-public class TagImageStep extends AbstractDockerStep {
+import java.io.Serializable;
+
+public class TagImageStep extends AbstractDockerStep implements Serializable {
+
+    private static final long serialVersionUID = -7095902323448215913L;
 
     private final String repo;
     private final String tagName;

@@ -17,28 +17,36 @@
 package io.fabric8.kubernetes.workflow;
 
 import com.google.inject.Inject;
+import hudson.FilePath;
 import hudson.model.TaskListener;
-import io.fabric8.docker.client.Config;
-import io.fabric8.docker.client.ConfigBuilder;
 import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
+import jenkins.security.MasterToSlaveCallable;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
 public class TagImageStepExecution extends AbstractSynchronousStepExecution<Boolean> {
 
     @Inject
-    private transient TagImageStep step;
+    private TagImageStep step;
 
     @StepContextParameter
-    private transient TaskListener listener;
+    private TaskListener listener;
+
+    @StepContextParameter
+    private FilePath workspace;
 
     @Override
     protected Boolean run() throws Exception {
-        try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
-            listener.getLogger().println("Tagging image:" + step.getName() + " with tag:" + step.getTagName() + ".");
-            return client.image()
-                    .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
-        }
+        return workspace.getChannel().call(new MasterToSlaveCallable<Boolean, Exception>() {
+            @Override
+            public Boolean call() throws Exception {
+                try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
+                    listener.getLogger().println("Tagging image:" + step.getName() + " with tag:" + step.getTagName() + ".");
+                    return client.image()
+                            .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
+                }
+            }
+        });
     }
 }

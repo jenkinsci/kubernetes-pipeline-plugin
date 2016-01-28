@@ -22,6 +22,7 @@ import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
 import io.fabric8.docker.dsl.EventListener;
 import io.fabric8.docker.dsl.OutputHandle;
+import jenkins.security.MasterToSlaveCallable;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
@@ -33,51 +34,56 @@ import java.util.concurrent.TimeUnit;
 public class PushImageStepExecution extends AbstractSynchronousStepExecution<Void> {
 
     @Inject
-    private transient PushImageStep step;
+    private PushImageStep step;
 
-    @StepContextParameter private transient FilePath workspace;
-    @StepContextParameter private transient TaskListener listener;
+    @StepContextParameter private FilePath workspace;
+    @StepContextParameter private TaskListener listener;
 
     @Override
     protected Void run() throws Exception {
-        OutputHandle handle = null;
-        final BlockingQueue queue = new LinkedBlockingQueue();
-        listener.getLogger().println("Pushing image:" + step.getName() + " to docker registry.");
-        try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
-            handle = client.image().withName(step.getName())
-                    .push()
-                    .usingListener(new EventListener() {
-                        @Override
-                        public void onSuccess(String s) {
-                            listener.getLogger().println(s);
-                            queue.add(true);
-                        }
+        return workspace.getChannel().call(new MasterToSlaveCallable<Void, Exception>() {
+            @Override
+            public Void call() throws Exception {
+                OutputHandle handle = null;
+                final BlockingQueue queue = new LinkedBlockingQueue();
+                try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
+                    listener.getLogger().println("Pushing image:" + step.getName() + " to docker registry.");
+                    handle = client.image().withName(step.getName())
+                            .push()
+                            .usingListener(new EventListener() {
+                                @Override
+                                public void onSuccess(String s) {
+                                    listener.getLogger().println(s);
+                                    queue.add(true);
+                                }
 
-                        @Override
-                        public void onError(String s) {
-                            listener.error(s);
-                            queue.add(new RuntimeException("Failed to push image. Error:" + s));
-                        }
+                                @Override
+                                public void onError(String s) {
+                                    listener.error(s);
+                                    queue.add(new RuntimeException("Failed to push image. Error:" + s));
+                                }
 
-                        @Override
-                        public void onEvent(String s) {
-                            listener.getLogger().println(s);
-                        }
-                    })
-                    .withTag(step.getTagName())
-                    .toRegistry();
+                                @Override
+                                public void onEvent(String s) {
+                                    listener.getLogger().println(s);
+                                }
+                            })
+                            .withTag(step.getTagName())
+                            .toRegistry();
 
-            Object result = queue.poll(step.getTimeout(), TimeUnit.MILLISECONDS);
-            if (result == null) {
-                throw new RuntimeException("Timed out (" + step.getTimeout()+"ms)pushing docker image.");
-            } else if (result instanceof Throwable) {
-                throw new RuntimeException((Throwable) result);
+                    Object result = queue.poll(step.getTimeout(), TimeUnit.MILLISECONDS);
+                    if (result == null) {
+                        throw new RuntimeException("Timed out (" + step.getTimeout() + "ms)pushing docker image.");
+                    } else if (result instanceof Throwable) {
+                        throw new RuntimeException((Throwable) result);
+                    }
+                } finally {
+                    if (handle != null) {
+                        handle.close();
+                    }
+                }
+                return null;
             }
-        } finally {
-            if (handle != null) {
-                handle.close();
-            }
-        }
-        return null;
+        });
     }
 }

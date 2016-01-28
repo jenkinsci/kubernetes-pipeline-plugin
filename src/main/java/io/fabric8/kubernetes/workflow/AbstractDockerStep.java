@@ -22,8 +22,11 @@ import io.fabric8.docker.client.ConfigBuilder;
 import io.fabric8.docker.client.utils.Utils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 
-public class AbstractDockerStep extends AbstractStepImpl {
+import java.io.Serializable;
 
+public class AbstractDockerStep extends AbstractStepImpl implements Serializable {
+
+    private static final long serialVersionUID = -9155746436499494358L;
     private final String name;
 
     private final String username;
