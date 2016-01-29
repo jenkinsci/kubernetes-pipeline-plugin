@@ -81,6 +81,9 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
     private List<EnvVar> createPodEnv(Map<String,String> env) throws IOException, InterruptedException {
         List<EnvVar> podEnv = new ArrayList<EnvVar>();
+        if (env == null || env.isEmpty()) {
+            return podEnv;
+        }
         EnvVars envReduced = new EnvVars(env);
         EnvVars envHost = computer.getEnvironment();
         envReduced.entrySet().removeAll(envHost.entrySet());

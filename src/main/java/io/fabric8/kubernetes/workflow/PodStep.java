@@ -23,6 +23,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,10 +46,10 @@ public class PodStep extends AbstractStepImpl implements Serializable {
         this.image = image;
         this.serviceAccount = serviceAccount;
         this.privileged = privileged;
-        this.secrets = secrets;
-        this.hostPathMounts = hostPathMounts;
-        this.emptyDirs = emptyDirs;
-        this.env = env;
+        this.secrets = secrets != null ? secrets : new HashMap();
+        this.hostPathMounts = hostPathMounts != null ? hostPathMounts : new HashMap();
+        this.emptyDirs = emptyDirs != null ? emptyDirs : new HashMap();
+        this.env = env != null ? env : new HashMap();
     }
 
     public String getName() {
