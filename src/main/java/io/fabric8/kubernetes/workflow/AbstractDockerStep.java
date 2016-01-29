@@ -21,24 +21,23 @@ import io.fabric8.docker.client.Config;
 import io.fabric8.docker.client.ConfigBuilder;
 import io.fabric8.docker.client.utils.Utils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.Serializable;
 
 public class AbstractDockerStep extends AbstractStepImpl implements Serializable {
 
     private static final long serialVersionUID = -9155746436499494358L;
+
     private final String name;
 
-    private final String username;
-    private final String password;
-    private final String email;
+    private String username;
+    private String password;
+    private String email;
 
-
-    public AbstractDockerStep(String name, String username, String password, String email) {
+    public AbstractDockerStep(String name) {
         this.name = name;
-        this.username = username;
-        this.password = password;
-        this.email = email;
+
     }
 
     public String getName() {
@@ -49,12 +48,27 @@ public class AbstractDockerStep extends AbstractStepImpl implements Serializable
         return username;
     }
 
+    @DataBoundSetter
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     public String getPassword() {
         return password;
     }
 
+    @DataBoundSetter
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
     public String getEmail() {
         return email;
+    }
+
+    @DataBoundSetter
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public Config getDockerConfig() {

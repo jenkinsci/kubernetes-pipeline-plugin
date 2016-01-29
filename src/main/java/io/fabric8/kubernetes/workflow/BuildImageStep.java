@@ -21,6 +21,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -29,35 +30,40 @@ public class BuildImageStep extends AbstractDockerStep implements Serializable {
 
     private static final long serialVersionUID = 1851294902925088301L;
 
-    private final Boolean rm;
-    private final String path;
-    private final long timeout;
+    private Boolean rm;
+    private String path;
+    private long timeout = 600000L;
 
     @DataBoundConstructor
-    public BuildImageStep(String name, Boolean rm, String path, long timeout, String username, String password, String email) {
-        super(name, username, password, email);
-        this.rm = rm;
-        this.path = path;
-        this.timeout = timeout;
-    }
-
-    public BuildImageStep(String name, String username, String password, String email, Boolean rm, String path, long timeout) {
-        super(name, username, password, email);
-        this.rm = rm;
-        this.path = path;
-        this.timeout = timeout;
+    public BuildImageStep(String name) {
+        super(name);
     }
 
     public Boolean getRm() {
         return rm;
     }
 
+    @DataBoundSetter
+    public void setRm(Boolean rm) {
+        this.rm = rm;
+    }
+
     public String getPath() {
         return path;
     }
 
+    @DataBoundSetter
+    public void setPath(String path) {
+        this.path = path;
+    }
+
     public long getTimeout() {
         return timeout;
+    }
+
+    @DataBoundSetter
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
     }
 
     @Extension

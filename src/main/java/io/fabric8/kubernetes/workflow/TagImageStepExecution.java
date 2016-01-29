@@ -42,9 +42,9 @@ public class TagImageStepExecution extends AbstractSynchronousStepExecution<Bool
             @Override
             public Boolean call() throws Exception {
                 try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
-                    listener.getLogger().println("Tagging image:" + step.getName() + " with tag:" + step.getTagName() + ".");
+                    listener.getLogger().println("Tagging image:" + step.getName() + " with tag:" + step.getTag() + ".");
                     return client.image()
-                            .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTagName());
+                            .withName(step.getName()).tag().inRepository(step.getRepo()).withTagName(step.getTag());
                 }
             }
         });

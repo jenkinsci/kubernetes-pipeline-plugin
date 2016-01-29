@@ -20,8 +20,11 @@ class Kubernetes implements Serializable {
 
     private org.jenkinsci.plugins.workflow.cps.CpsScript script
 
+    public final image
+
     public Kubernetes(org.jenkinsci.plugins.workflow.cps.CpsScript script) {
         this.script = script
+        this.image = new Image(this)
     }
 
     private <V> V node(Closure<V> body) {
@@ -35,12 +38,16 @@ class Kubernetes implements Serializable {
         }
     }
 
-    public Pod pod(String name) {
-        return new Pod(this, name, null, null, false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>());
+    public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", Boolean privileged = false, Map<String, String> secrets = new HashMap(), Map<String, String> hostPaths = new HashMap(), Map<String, String> emptyDirs = new HashMap(), Map<String, String> env = new HashMap<>()) {
+        return new Pod(this, name, image, serviceAccount, privileged, secrets, hostPaths, emptyDirs, env);
     }
 
     public Image image() {
         return new Image(this);
+    }
+
+    public Image image(String name) {
+        return new NamedImage(this, name);
     }
 
     public static class Pod implements Serializable {
@@ -119,7 +126,7 @@ class Kubernetes implements Serializable {
         }
     }
 
-    public static class Image implements Serializable {
+    public class Image implements Serializable {
 
         private final Kubernetes kubernetes;
 
@@ -127,10 +134,35 @@ class Kubernetes implements Serializable {
             this.kubernetes = kubernetes
         }
 
+        //Shortcut to build
+        Pod build(String name, String path = ".", boolean rm = false, long  timeout = 600000L) {
+            this.withName(name)
+                    .build()
+                    .withTimeout(timeout)
+                    .removingIntermediate(rm)
+                    .fromPath(path)
+        }
+
+        //Shortcut to tag
+        void tag(String name, String tag, String repo = "") {
+            this.withName(name)
+                    .tag()
+                    .inRepository(repo.isEmpty() ? repo : name)
+                    .withTag(tag)
+        }
+
+        //Shortcut to push
+        void push(String name, String tagName = "latest", long  timeout = 600000L) {
+            this.withName(name)
+                    .push()
+                    .withTimeout(timeout)
+                    .withTag(tagName)
+                    .toRegistry()
+        }
+
         NamedImage withName(String name) {
             return new NamedImage(kubernetes, name);
         }
-
      }
 
     private static class NamedImage implements Serializable {
@@ -141,6 +173,10 @@ class Kubernetes implements Serializable {
         NamedImage(Kubernetes kubernetes, String name) {
             this.kubernetes = kubernetes
             this.name = name
+        }
+
+        Pod toPod() {
+            return new Pod(kubernetes, "jenkins-buildpod", name, "", false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>())
         }
 
 
@@ -177,7 +213,11 @@ class Kubernetes implements Serializable {
         }
 
         BuildImage removingIntermediate() {
-            return new BuildImage(kubernetes, name, true, timeout, username, password, email);
+            return removingIntermediate(true)
+        }
+
+        BuildImage removingIntermediate(Boolean rm) {
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
         }
 
         BuildImage withTimeout(long timeout) {
@@ -196,10 +236,11 @@ class Kubernetes implements Serializable {
             return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
         }
 
-        void fromPath(String path) {
+        Pod fromPath(String path) {
             kubernetes.node {
                 kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email);
             }
+            return new NamedImage(kubernetes, name).toPod()
         }
     }
 
