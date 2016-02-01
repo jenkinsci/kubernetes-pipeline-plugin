@@ -57,18 +57,18 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         final AtomicBoolean podAlive = new AtomicBoolean(false);
         final CountDownLatch podStarted = new CountDownLatch(1);
         final CountDownLatch podFinished = new CountDownLatch(1);
-        try (KubernetesFacade kubernetes = new KubernetesFacade()) {
 
-            kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(),  workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
-            kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
-            podStarted.await();
+        //The body is executed async. so we can't use try with resource here.
+        final KubernetesFacade kubernetes = new KubernetesFacade();
+        kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
+        kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
+        podStarted.await();
 
-            context.newBodyInvoker()
-                    .withContext(BodyInvoker
-                            .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, podAlive, podStarted, podFinished)))
-                    .withCallback(new PodCallback(podName)).start();
-
-        }
+        context.newBodyInvoker()
+                .withContext(BodyInvoker
+                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, podAlive, podStarted, podFinished)))
+                .withCallback(new PodCallback(kubernetes, podName))
+                .start();
         return false;
     }
 
@@ -99,30 +99,39 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
     }
 
     private class PodCallback extends BodyExecutionCallback {
+
+        private final transient KubernetesFacade kubernetes;
         private final String podName;
 
-        private PodCallback(String podName) {
+        private PodCallback(KubernetesFacade kubernetes, String podName) {
+            this.kubernetes = kubernetes;
             this.podName = podName;
         }
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            try (KubernetesFacade kubernetes = new KubernetesFacade()) {
+            try {
                 kubernetes.deletePod(podName);
-            } catch (IOException e) {
-                LOGGER.warning("Failed to cleanup pod:" + podName);
             } finally {
+                try {
+                    kubernetes.close();
+                } catch (IOException e) {
+                    LOGGER.warning("Failed to properly cleanup");
+                }
                 context.onSuccess(result);
             }
         }
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            try (KubernetesFacade kubernetes = new KubernetesFacade()) {
+            try {
                 kubernetes.deletePod(podName);
-            } catch (IOException e) {
-                LOGGER.warning("Failed to cleanup pod:" + podName);
             } finally {
+                try {
+                    kubernetes.close();
+                } catch (IOException e) {
+                    LOGGER.warning("Failed to properly cleanup");
+                }
                 context.onFailure(t);
             }
         }
