@@ -59,7 +59,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         final CountDownLatch podFinished = new CountDownLatch(1);
         try (KubernetesFacade kubernetes = new KubernetesFacade()) {
 
-            kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getEmptyDirs(), step.getHostPathMounts(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
+            kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(),  workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
             kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
             podStarted.await();
 

@@ -96,7 +96,7 @@ class Kubernetes implements Serializable {
         }
 
         public Pod withHostPathMount(String hostPath, String mountPath) {
-            Map<String, String> newHostPathMounts = new HashMap<>(secrets);
+            Map<String, String> newHostPathMounts = new HashMap<>(hostPathMounts);
             newHostPathMounts.put(hostPath, mountPath);
             return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, emptyDirs, env);
         }
