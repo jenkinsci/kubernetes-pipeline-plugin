@@ -4,20 +4,21 @@ Kubernetes Workflow
 Kubernetes Workflow is Jenkins plugin which extends [Jenkins Workflow](https://github.com/jenkinsci/workflow-plugin) to allow building and testing inside Kubernetes Pods reusing kubernetes features like pods, build images, service accounts, volumes and secrets while providing an elastic slave pool (each build runs in new pods).
 
 ## Features
-- Service Accounts
-- Volumes
-- Secrets
+- Build steps inside Kubernetes Pods
+    - Service Accounts
+    - Volumes
+    - Secrets
+- Building, Pushing and using Docker Images
 
 
-## Examples
+## Working with Kubernetes Pods
 
 ### Using a maven kubernetes pod
 
     kubernetes.pod('buildpod').withImage('maven').inside {      
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
-    }
-    
+    }    
     
 ### Using environment variables
 
@@ -69,6 +70,33 @@ This also supports specifying the medium (e.g. "Memory")
         git 'https://github.com/fabric8io/kubernetes-workflow.git'
         sh 'mvn clean install'
     }   
+    
+## Working with Dokcer Images    
+
+### Building, Tagging and Pushing
+
+    node {
+        git 'https://github.com/fabric8-quickstarts/node-example.git'
+        if (!fileExists ('Dockerfile')) {
+          writeFile file: 'Dockerfile', text: 'FROM node:5.3-onbuild'
+        }
+        kubernetes.image().withName("example").build().fromPath(".")
+        kubernetes.image().withName("example").tag().inRepository("172.30.101.121:5000/default/example").withTag("1.0")
+        kubernetes.image().withName("172.30.101.121:5000/default/example").push().withTag("1.0").toRegistry()
+    } 
+    
+### Skipping the tagging part
+    
+You can directly tag the image during the build step:
+
+    node {
+        git 'https://github.com/fabric8-quickstarts/node-example.git'
+        if (!fileExists ('Dockerfile')) {
+          writeFile file: 'Dockerfile', text: 'FROM node:5.3-onbuild'
+        }
+        kubernetes.image().withName("172.30.101.121:5000/default/example").build().fromPath(".")
+        kubernetes.image().withName("172.30.101.121:5000/default/example").push().toRegistry()
+    } 
 
 ## Technical notes
 

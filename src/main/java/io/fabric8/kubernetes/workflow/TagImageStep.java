@@ -18,28 +18,37 @@ package io.fabric8.kubernetes.workflow;
 
 import hudson.Extension;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
-public class TagImageStep extends AbstractDockerStep {
+import java.io.Serializable;
 
-    private final String repo;
-    private final String tagName;
+public class TagImageStep extends AbstractDockerStep implements Serializable {
+
+    private static final long serialVersionUID = -7095902323448215913L;
+
+    private final String tag;
+    private String repo;
 
     @DataBoundConstructor
-    public TagImageStep(String name, String repo, String tagName, String username, String password, String email) {
-        super(name, username, password, email);
-        this.repo = repo;
-        this.tagName = tagName;
+    public TagImageStep(String name, String tag) {
+        super(name);
+        this.tag = tag;
+        this.repo = name;
+    }
+
+    public String getTag() {
+        return tag;
     }
 
     public String getRepo() {
         return repo;
     }
 
-    public String getTagName() {
-        return tagName;
+    @DataBoundSetter
+    public void setRepo(String repo) {
+        this.repo = repo;
     }
 
     @Extension

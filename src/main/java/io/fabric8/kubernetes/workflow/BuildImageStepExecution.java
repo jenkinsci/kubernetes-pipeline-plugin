@@ -28,9 +28,11 @@ import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
 import io.fabric8.docker.dsl.EventListener;
 import io.fabric8.docker.dsl.OutputHandle;
+import jenkins.security.MasterToSlaveCallable;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
 import java.io.File;
@@ -60,35 +62,40 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
     private static final transient Logger LOGGER = Logger.getLogger(BuildImageStepExecution.class.getName());
 
     @Inject
-    private transient BuildImageStep step;
+    private BuildImageStep step;
 
-    @StepContextParameter private transient FilePath workspace;
-    @StepContextParameter private transient TaskListener listener;
+    @StepContextParameter private FilePath workspace;
+    @StepContextParameter private TaskListener listener;
     @StepContextParameter private transient EnvVars env;
 
     @Override
     protected Void run() throws Exception {
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        try (PipedInputStream pin = new PipedInputStream();
-             PipedOutputStream pout = new PipedOutputStream(pin)) {
+        return workspace.getChannel().call(new MasterToSlaveCallable<Void, Exception>() {
+            @Override
+            public Void call() throws Exception {
+                ExecutorService executorService = Executors.newFixedThreadPool(2);
+                try (PipedInputStream pin = new PipedInputStream();
+                     PipedOutputStream pout = new PipedOutputStream(pin)) {
 
-            Future<Boolean> createTarFuture = executorService.submit(new CreateTarTask(pout));
-            Future<Boolean> buildImageFuture = executorService.submit(new BuildImageTask(pin));
+                    Future<Boolean> createTarFuture = executorService.submit(new CreateTarTask(pout));
+                    Future<Boolean> buildImageFuture = executorService.submit(new BuildImageTask(pin));
 
-            //Wait for the two tasks to complete.
-            if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
-                listener.getLogger().println("Failed to create docker image tarball.");
-            } else if (!buildImageFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
-                listener.getLogger().println("Failed to build docker image.");
+                    //Wait for the two tasks to complete.
+                    if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
+                        listener.getLogger().println("Failed to create docker image tarball.");
+                    } else if (!buildImageFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
+                        listener.getLogger().println("Failed to build docker image.");
+                    }
+                } finally {
+                    executorService.shutdown();
+                    if (executorService.awaitTermination(30, TimeUnit.SECONDS)) {
+                        executorService.shutdownNow();
+                    }
+                }
+
+                return null; //Void
             }
-        } finally {
-            executorService.shutdown();
-            if (executorService.awaitTermination(30, TimeUnit.SECONDS)) {
-                executorService.shutdownNow();
-            }
-        }
-
-        return null; //Void
+        });
     }
 
     private class BuildImageTask implements Callable<Boolean> {

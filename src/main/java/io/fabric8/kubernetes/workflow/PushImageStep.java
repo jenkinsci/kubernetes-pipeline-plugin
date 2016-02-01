@@ -18,34 +18,50 @@ package io.fabric8.kubernetes.workflow;
 
 import hudson.Extension;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
-public class PushImageStep extends AbstractDockerStep {
+import java.io.Serializable;
 
-    private final String tagName;
-    private final Boolean force;
-    private final long timeout;
+public class PushImageStep extends AbstractDockerStep implements Serializable {
+
+    private static final long serialVersionUID = -6633237919456764764L;
+
+    private String tag;
+    private Boolean force;
+    private long timeout = 600000L;
 
     @DataBoundConstructor
-    public PushImageStep(String name, String tagName, Boolean force, long timeout, String username, String password, String email) {
-        super(name, username, password, email);
-        this.tagName = tagName;
-        this.force = force;
-        this.timeout = timeout;
+    public PushImageStep(String name) {
+        super(name);
     }
 
-    public String getTagName() {
-        return tagName;
+    public String getTag() {
+        return tag;
+    }
+
+    @DataBoundSetter
+    public void setTag(String tag) {
+        this.tag = tag;
     }
 
     public Boolean getForce() {
         return force;
     }
 
+    @DataBoundSetter
+    public void setForce(Boolean force) {
+        this.force = force;
+    }
+
     public long getTimeout() {
         return timeout;
+    }
+
+    @DataBoundSetter
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
     }
 
     @Extension
