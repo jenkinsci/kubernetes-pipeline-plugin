@@ -281,7 +281,7 @@ class Kubernetes implements Serializable {
 
         void withTag(String tagName) {
             kubernetes.node {
-                kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName, username: username, password: password, email: email);
+                kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, username: username, password: password, email: email);
             }
         }
     }
