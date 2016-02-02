@@ -147,7 +147,7 @@ class Kubernetes implements Serializable {
         void tag(String name, String tag, String repo = "") {
             this.withName(name)
                     .tag()
-                    .inRepository(repo.isEmpty() ? repo : name)
+                    .inRepository(repo != null && !repo.isEmpty() ? repo : name)
                     .withTag(tag)
         }
 
@@ -281,7 +281,7 @@ class Kubernetes implements Serializable {
 
         void withTag(String tagName) {
             kubernetes.node {
-                kubernetes.script.tagImage(name: name, repo: repo, tagName: tagName, username: username, password: password, email: email);
+                kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, username: username, password: password, email: email);
             }
         }
     }
