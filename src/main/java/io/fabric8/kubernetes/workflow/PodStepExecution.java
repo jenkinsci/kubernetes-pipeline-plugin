@@ -67,7 +67,7 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         context.newBodyInvoker()
                 .withContext(BodyInvoker
                         .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, podAlive, podStarted, podFinished)))
-                .withCallback(new PodCallback(kubernetes, podName))
+                        .withCallback(new PodCallback(podName))
                 .start();
         return false;
     }
@@ -100,38 +100,32 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
     private class PodCallback extends BodyExecutionCallback {
 
-        private final transient KubernetesFacade kubernetes;
         private final String podName;
 
-        private PodCallback(KubernetesFacade kubernetes, String podName) {
-            this.kubernetes = kubernetes;
+        private PodCallback(String podName) {
             this.podName = podName;
         }
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            try {
+            listener.getLogger().println("SUCCESS CALLBACK");
+            try (KubernetesFacade kubernetes = new KubernetesFacade()){
                 kubernetes.deletePod(podName);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to properly cleanup");
             } finally {
-                try {
-                    kubernetes.close();
-                } catch (IOException e) {
-                    LOGGER.warning("Failed to properly cleanup");
-                }
                 context.onSuccess(result);
             }
         }
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            try {
+            listener.getLogger().println("FAILURE CALLBACK");
+            try (KubernetesFacade kubernetes = new KubernetesFacade()){
                 kubernetes.deletePod(podName);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to properly cleanup");
             } finally {
-                try {
-                    kubernetes.close();
-                } catch (IOException e) {
-                    LOGGER.warning("Failed to properly cleanup");
-                }
                 context.onFailure(t);
             }
         }
