@@ -147,7 +147,7 @@ class Kubernetes implements Serializable {
         void tag(String name, String tag, String repo = "") {
             this.withName(name)
                     .tag()
-                    .inRepository(repo.isEmpty() ? repo : name)
+                    .inRepository(repo != null && !repo.isEmpty() ? repo : name)
                     .withTag(tag)
         }
 
