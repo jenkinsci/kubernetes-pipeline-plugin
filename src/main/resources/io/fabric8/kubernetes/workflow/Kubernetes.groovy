@@ -444,4 +444,44 @@ class Kubernetes implements Serializable {
             }
         }
     }
+
+    public String sendEvent(String json, String elasticsearchType = 'custom') {
+        return new SendEvent(this, json, elasticsearchType);
+    }
+
+    public static class SendEvent implements Serializable {
+        private final Kubernetes kubernetes;
+        private final String json;
+        private final String elasticsearchType;
+
+        SendEvent(Kubernetes kubernetes, String json, String elasticsearchType){
+            this.kubernetes = kubernetes
+            this.json = json;
+            this.elasticsearchType = elasticsearchType;
+
+        }
+
+        /**
+         * The json payload to send to elasticsearch
+         */
+        public SendEvent withJson(String json) {
+            return new SendEvent(kubernetes, json, elasticsearchType);
+        }
+
+        /**
+         * The elasticsearch type the index uses See {@linktourl https://www.elastic.co/guide/en/elasticsearch/guide/current/mapping.html#mapping}
+         */
+        public SendEvent withElasticsearchType(String elasticsearchType) {
+            return new SendEvent(kubernetes, json, elasticsearchType);
+        }
+
+        /**
+         * Send event to elasticsearch
+         */
+        public void send() {
+            kubernetes.node {
+                kubernetes.script.sendEvent(json: json, type: elasticsearchType)
+            }
+        }
+    }
 }
