@@ -28,8 +28,6 @@ import java.util.Map;
 public class ApplyStep extends AbstractStepImpl {
 
     private final String file;
-    private final String fabric8yml;
-    private final String gityml;
     private final String environment;
     private Boolean createNewResources = true;
     private Boolean servicesOnly = false;
@@ -41,10 +39,8 @@ public class ApplyStep extends AbstractStepImpl {
     private Boolean rollingUpgradePreserveScale = true;
 
     @DataBoundConstructor
-    public ApplyStep(String file, String fabric8yml, String gityml, String environment, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale){
+    public ApplyStep(String file, String environment, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale){
         this.file = file;
-        this.fabric8yml = fabric8yml;
-        this.gityml = gityml;
         this.environment = environment;
         if (createNewResources != null) this.createNewResources = createNewResources;
         if (servicesOnly != null) this.servicesOnly = servicesOnly;
@@ -59,14 +55,6 @@ public class ApplyStep extends AbstractStepImpl {
 
     public String getFile() {
         return file;
-    }
-
-    public String getFabric8yml() {
-        return fabric8yml;
-    }
-
-    public String getGityml() {
-        return gityml;
     }
 
     public String getEnvironment() {

@@ -32,9 +32,14 @@
     <packaging>hpi</packaging>
 
     <properties>
+        <es.version>2.1.1</es.version>
         <fabric8.version>2.2.85</fabric8.version>
-        <workflow.version>1.7-alpha-1</workflow.version>
+        <git-client.version>1.19.2</git-client.version>
+        <httpcore.version>4.4</httpcore.version>
+        <jackson-databind.version>2.6.3</jackson-databind.version>
         <maven-hpi-plugin.version>1.112</maven-hpi-plugin.version>
+        <restassured.version>1.7.2</restassured.version>
+        <workflow.version>1.7-alpha-1</workflow.version>
     </properties>
 
     <dependencyManagement>
@@ -53,6 +58,16 @@
                 <groupId>com.squareup.okhttp</groupId>
                 <artifactId>logging-interceptor</artifactId>
                 <version>2.7.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>git-client</artifactId>
+                <version>${git-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson-databind.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -79,7 +94,29 @@
             <artifactId>docker-client</artifactId>
             <version>1.0.4</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.jayway.restassured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>${restassured.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.groovy</groupId>
+                    <artifactId>groovy</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.groovy</groupId>
+                    <artifactId>groovy-json</artifactId>
+                </exclusion>
+                <exclusion>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy-xml</artifactId>
+            </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>docker-commons</artifactId>
@@ -138,6 +175,10 @@
             <artifactId>workflow-durable-task-step</artifactId>
             <version>${workflow.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>git-client</artifactId>
         </dependency>
     </dependencies>
 

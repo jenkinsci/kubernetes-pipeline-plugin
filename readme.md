@@ -71,7 +71,7 @@ This also supports specifying the medium (e.g. "Memory")
         sh 'mvn clean install'
     }   
     
-## Working with Dokcer Images    
+## Working with Docker Images
 
 ### Building, Tagging and Pushing
 
@@ -97,6 +97,41 @@ You can directly tag the image during the build step:
         kubernetes.image().withName("172.30.101.121:5000/default/example").build().fromPath(".")
         kubernetes.image().withName("172.30.101.121:5000/default/example").push().toRegistry()
     } 
+
+## Working with Kubernetes
+
+You can apply Kubernetes resources in order to create and update pods, services, replication controllers, lists and openshift templates.  When running on openshift it will also create routes so that services are exposed.
+
+Apply changes by passing the JSON formatted resource and the required environment.  If the enlvironment does not exist then a new namespace is created with the environment name.
+
+
+    node {
+        def rc = getKubernetesJson {
+          port = 8080
+          label = 'node'
+          icon = 'https://cdn.rawgit.com/fabric8io/fabric8/dc05040/website/src/images/logos/nodejs.svg'
+          version = newVersion
+          imageName = clusterImageName
+        }
+
+        kubernetesApply(file: rc, environment: 'my-cool-app-staging')
+    }
+
+__NOTE__ By default [DeploymentEvent](https://github.com/fabric8io/kubernetes-workflow/blob/master/src/main/java/io/fabric8/kubernetes/workflow/elasticsearch/DeploymentEvent.java) are sent to elasticsearch (if running in the same namespace) when a pod or replication controller is deployed.
+
+
+## Working with Elasticsearch
+
+You can send events to elasticsearch providing it is running in the current namespace with a Kubernetes service name of `elasticsearch`.  The fabric8 logging template does exactly this.
+
+
+    node {
+        def event = '{"user" : "rawlingsj","post_date" : "2016-01-30T13:29:36+00:00","project" : "my-cool-project"}'
+
+        sendEvent(json: event, elasticsearchType: 'mytype')
+    }
+
+__NOTE__ The elasticsearch index used is `pipeline` and if no elasticsearchType is set the `custom` type is used.  For more information see https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html#docs-index_
 
 ## Technical notes
 

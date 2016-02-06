@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package io.fabric8.kubernetes.workflow;
+package io.fabric8.kubernetes.workflow.git;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.io.Serializable;
+
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class GitConfig{
+public class GitConfig implements Serializable {
 
     private String branch;
     private String commit;
+    private String author;
 
     public GitConfig() {
     }
@@ -42,4 +45,8 @@ public class GitConfig{
     public void setCommit(String commit) {
         this.commit = commit;
     }
+
+    public String getAuthor() { return author; }
+
+    public void setAuthor(String author) { this.author = author; }
 }
