@@ -24,8 +24,10 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 import io.fabric8.devops.ProjectConfig;
 import io.fabric8.devops.ProjectConfigs;
+import io.fabric8.devops.ProjectRepositories;
 import io.fabric8.kubernetes.api.Controller;
 import io.fabric8.kubernetes.api.KubernetesHelper;
+import io.fabric8.kubernetes.api.ServiceNames;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -48,6 +50,7 @@ import static io.fabric8.utils.PropertiesHelper.toMap;
 
 import javax.inject.Inject;
 import java.io.*;
+import java.net.ConnectException;
 import java.net.URL;
 import java.util.*;
 
@@ -65,6 +68,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
     @StepContextParameter
     transient EnvVars env;
 
+    private KubernetesClient kubernetes;
+
     @Override
     public String run() throws Exception {
 
@@ -75,7 +80,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             throw new AbortException("Supply file and target environment");
         }
 
-        try (KubernetesClient kubernetes = new DefaultKubernetesClient()) {
+        try (KubernetesClient kubernetes = getKubernetes()) {
             Controller controller = new Controller(kubernetes);
             controller.setThrowExceptionOnError(true);
             controller.setRecreateMode(false);
@@ -311,19 +316,55 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
         ProjectConfig projectConfig = getProjectConfig();
         GitConfig gitConfig = getGitConfig();
+        String repoName = projectConfig.getBuildName();
+        String userEnvVar = "JENKINS_GOGS_USER";
+        String username = env.get(userEnvVar);
 
         if (io.fabric8.utils.Objects.equal("BUILD_URL", envVarName)) {
             String jobUrl = projectConfig.getLink("Job");
             if (Strings.isNullOrBlank(jobUrl)) {
-                listener.getLogger().println("No Job link found in fabric8.yml so we cannot set the BUILD_URL");
+                String name = projectConfig.getBuildName();
+                if (Strings.isNullOrBlank(name)) {
+                    // lets try deduce the jenkins build name we'll generate
+                    if (Strings.isNotBlank(repoName)) {
+                        name = repoName;
+                        if (Strings.isNotBlank(username)) {
+                            name = ProjectRepositories.createBuildName(username, repoName);
+                        } else {
+                            listener.getLogger().println("Cannot auto-default BUILD_URL as there is no environment variable `" + userEnvVar + "` defined so we can't guess the Jenkins build URL");
+                        }
+                    }
+                }
+                if (Strings.isNotBlank(name)) {
+                    // this requires online access to kubernetes so we should silently fail if no connection
+                    String jenkinsUrl = KubernetesHelper.getServiceURLInCurrentNamespace(getKubernetes(), ServiceNames.JENKINS, "http", null, true);
+                    jobUrl = URLUtils.pathJoin(jenkinsUrl, "/job", name);
+
+                }
+            }
+            if (Strings.isNotBlank(jobUrl)) {
+                String buildId = env.get("BUILD_ID");
+                if (Strings.isNotBlank(buildId)) {
+                    jobUrl = URLUtils.pathJoin(jobUrl, buildId);
+                } else {
+                    listener.getLogger().println("Cannot find BUILD_ID to create a specific jenkins build URL. So using: " + jobUrl);
+                }
             }
             return jobUrl;
         } else if (io.fabric8.utils.Objects.equal("GIT_URL", envVarName)) {
             String gitUrl = projectConfig.getLinks().get("Git");
             if (Strings.isNullOrBlank(gitUrl)) {
                 listener.getLogger().println("No Job link found in fabric8.yml so we cannot set the GIT_URL");
+            } else {
+                if (gitUrl.endsWith(".git")) {
+                    gitUrl = gitUrl.substring(0, gitUrl.length() - 4);
+                }
+                String gitCommitId = gitConfig.getCommit();
+                if (Strings.isNotBlank(gitCommitId)) {
+                    gitUrl = URLUtils.pathJoin(gitUrl, "commit", gitCommitId);
+                }
+                return gitUrl;
             }
-            return gitUrl;
 
         } else if (io.fabric8.utils.Objects.equal("GIT_COMMIT", envVarName)) {
             String gitCommit = gitConfig.getCommit();
@@ -414,6 +455,13 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writeValueAsString(event);
+    }
+
+    public KubernetesClient getKubernetes() {
+        if (kubernetes == null) {
+            kubernetes = new DefaultKubernetesClient();
+        }
+        return kubernetes;
     }
 }
 

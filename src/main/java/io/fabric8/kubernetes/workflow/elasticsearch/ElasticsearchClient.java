@@ -53,8 +53,9 @@ public class ElasticsearchClient {
 
         } catch (Exception e){
             // handle exceptions as elasticsearch may not be running and we dont want to abort the pipeline
+            e.printStackTrace(listener.getLogger());
             listener.getLogger().println("REQUEST: "+json);
-            listener.getLogger().println("Unable to send "+type+" event to ES. Check ES in running in the current namespace." +listener.getLogger());
+            listener.getLogger().println("Unable to send event `" + type + "` to Elasticsearch. Check Elasticsearch in running in the current namespace.");
             return false;
         }
     }
