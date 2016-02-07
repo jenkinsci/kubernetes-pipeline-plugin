@@ -18,6 +18,7 @@ package io.fabric8.kubernetes.workflow;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -336,7 +337,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     }
                 }
                 if (Strings.isNotBlank(name)) {
-                    // this requires online access to kubernetes so we should silently fail if no connection
                     String jenkinsUrl = KubernetesHelper.getServiceURLInCurrentNamespace(getKubernetes(), ServiceNames.JENKINS, "http", null, true);
                     jobUrl = URLUtils.pathJoin(jenkinsUrl, "/job", name);
 
@@ -411,9 +411,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
     }
 
     public GitConfig getGitConfig() throws AbortException {
-        GitClient client = null;
         try {
-            client = Git.with(listener, env).in(workspace).getClient();
+            GitClient client = Git.with(listener, env).in(workspace).getClient();
             return client.withRepository(new GitInfoCallback(listener));
         } catch (Exception e) {
             throw new AbortException("Error getting git config " + e);
@@ -454,6 +453,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         event.setVersion(env.get("VERSION"));
 
         ObjectMapper mapper = new ObjectMapper();
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return mapper.writeValueAsString(event);
     }
 
