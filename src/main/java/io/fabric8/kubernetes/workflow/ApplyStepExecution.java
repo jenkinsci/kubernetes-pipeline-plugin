@@ -54,6 +54,8 @@ import java.io.*;
 import java.net.ConnectException;
 import java.net.URL;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ApplyStepExecution extends AbstractSynchronousStepExecution<String> {
 
@@ -132,11 +134,16 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
             entities.addAll(KubernetesHelper.toItemList(dto));
 
-            //if (createRoutes) {
+            if (openShift) {
                 createRoutes(kubernetes, entities, environment);
-            //}
+            }
 
             addEnvironmentAnnotations(entities);
+
+            String registry = getRegistry();
+            if (Strings.isNotBlank(registry)){
+                addRegistryToImageNameIfNotPresent(entities, registry);
+            }
 
             //Apply all items
             for (HasMetadata entity : entities) {
@@ -165,6 +172,14 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             throw new AbortException("Error during kubernetes apply: " + e.getMessage());
         }
         return "OK";
+    }
+
+    private String getRegistry() {
+        if (Strings.isNullOrBlank(step.getRegistry())) {
+            return env.get("DEFAULT_DOCKER_REGISTRY");
+        } else {
+            return step.getRegistry();
+        }
     }
 
     protected void createRoutes(KubernetesClient kubernetes, Collection<HasMetadata> collection, String namespace) throws AbortException {
@@ -272,6 +287,64 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             }
         }
     }
+
+    public void addRegistryToImageNameIfNotPresent(Iterable<HasMetadata> items, String registry) throws Exception {
+        if (items != null) {
+            for (HasMetadata item : items) {
+                if (item instanceof KubernetesList) {
+                    KubernetesList list = (KubernetesList) item;
+                    addRegistryToImageNameIfNotPresent(list.getItems(), registry);
+                } else if (item instanceof Template) {
+                    Template template = (Template) item;
+                    addRegistryToImageNameIfNotPresent(template.getObjects(), registry);
+                } else if (item instanceof Pod) {
+                    List<Container> containers = ((Pod) item).getSpec().getContainers();
+                    prefixRegistryIfNotPresent(containers, registry);
+
+                } else if (item instanceof ReplicationController) {
+                    List<Container> containers = ((ReplicationController) item).getSpec().getTemplate().getSpec().getContainers();
+                    prefixRegistryIfNotPresent(containers, registry);
+
+                } else if (item instanceof DeploymentConfig) {
+                    List<Container> containers = ((DeploymentConfig) item).getSpec().getTemplate().getSpec().getContainers();
+                    prefixRegistryIfNotPresent(containers, registry);
+                }
+            }
+        }
+    }
+
+    private void prefixRegistryIfNotPresent(List<Container> containers, String registry) {
+        for (Container container : containers) {
+            if (!hasRegistry(container.getImage())){
+                container.setImage(registry+"/"+container.getImage());
+            }
+        }
+    }
+
+    /**
+     * Checks to see if there's a registry name already provided in the image name
+     *
+     * Code influenced from <a href="https://github.com/rhuss/docker-maven-plugin/blob/master/src/main/java/org/jolokia/docker/maven/util/ImageName.java">docker-maven-plugin</a>
+     * @param imageName
+     * @return true if the image name contains a registry
+     */
+    public static boolean hasRegistry(String imageName) {
+        if (imageName == null) {
+            throw new NullPointerException("Image name must not be null");
+        }
+        Pattern tagPattern = Pattern.compile("^(.+?)(?::([^:/]+))?$");
+        Matcher matcher = tagPattern.matcher(imageName);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException(imageName + " is not a proper image name ([registry/][repo][:port]");
+        }
+
+        String rest = matcher.group(1);
+        String[] parts = rest.split("\\s*/\\s*");
+        String part = parts[0];
+
+        return part.contains(".") || part.contains(":");
+    }
+
 
     protected void addEnvironmentAnnotations(HasMetadata resource) throws AbortException {
         Map<String, String> mapEnvVarToAnnotation = new HashMap<>();

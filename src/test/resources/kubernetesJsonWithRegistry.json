@@ -1,0 +1,134 @@
+{
+  "apiVersion" : "v1",
+  "kind" : "Template",
+  "labels" : { },
+  "metadata" : {
+    "annotations" : {
+      "description" : "test example",
+      "fabric8.my-test-image/iconUrl" : "test-icon",
+      "fabric8.my-test-image/summary" : "A nodeJS example"
+    },
+    "labels" : { },
+    "name" : "my-test-image"
+  },
+  "objects" : [{
+    "kind": "Service",
+    "apiVersion": "v1",
+    "metadata": {
+      "name": "my-test-image",
+      "creationTimestamp": null,
+      "labels": {
+        "component": "my-test-image",
+        "container": "test",
+        "group": "quickstarts",
+        "project": "my-test-image",
+        "provider": "fabric8",
+        "version": "TEST-1.0"
+      },
+      "annotations": {
+        "prometheus.io/port": "1111",
+        "prometheus.io/scheme": "http",
+        "prometheus.io/scrape": "true"
+      }
+    },
+    "spec": {
+      "ports": [
+        {
+          "protocol": "TCP",
+          "port": 80,
+          "targetPort": 1111
+      }
+      ],
+      "selector": {
+        "component": "my-test-image",
+        "container": "test",
+        "group": "quickstarts",
+        "project": "my-test-image",
+        "provider": "fabric8",
+        "version": "TEST-1.0"
+      },
+      "type": "ClusterIP",
+      "sessionAffinity": "None"
+    },
+    "status": {
+      "loadBalancer": {}
+    }
+  },
+    {
+      "kind": "ReplicationController",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "my-test-image",
+        "generation": 1,
+        "creationTimestamp": null,
+        "labels": {
+          "component": "my-test-image",
+          "container": "test",
+          "group": "quickstarts",
+          "project": "my-test-image",
+          "provider": "fabric8",
+          "version": "TEST-1.0"
+        }
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "component": "my-test-image",
+          "container": "test",
+          "group": "quickstarts",
+          "project": "my-test-image",
+          "provider": "fabric8",
+          "version": "TEST-1.0"
+        },
+        "template": {
+          "metadata": {
+            "creationTimestamp": null,
+            "labels": {
+              "component": "my-test-image",
+              "container": "test",
+              "group": "quickstarts",
+              "project": "my-test-image",
+              "provider": "fabric8",
+              "version": "TEST-1.0"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "my-test-image",
+                "image": "myexternalregistry.io:5000/TEST_NS/my-test-image:TEST-1.0",
+                "ports": [
+                  {
+                    "name": "web",
+                    "containerPort": 1111,
+                  "protocol": "TCP"
+                  }
+                ],
+                "env": [
+                  {
+                    "name": "KUBERNETES_NAMESPACE",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.namespace"
+                      }
+                    }
+                  }
+                ],
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log",
+                "imagePullPolicy": "IfNotPresent",
+                "securityContext": {}
+              }
+            ],
+            "restartPolicy": "Always",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "securityContext": {}
+          }
+        }
+      },
+      "status": {
+        "replicas": 0
+      }
+    }]}

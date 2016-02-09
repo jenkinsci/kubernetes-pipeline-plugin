@@ -29,6 +29,7 @@ public class ApplyStep extends AbstractStepImpl {
 
     private final String file;
     private final String environment;
+    private final String registry;
     private Boolean createNewResources = true;
     private Boolean servicesOnly = false;
     private Boolean ignoreServices = false;
@@ -39,9 +40,10 @@ public class ApplyStep extends AbstractStepImpl {
     private Boolean rollingUpgradePreserveScale = true;
 
     @DataBoundConstructor
-    public ApplyStep(String file, String environment, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale){
+    public ApplyStep(String file, String environment, String registry, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale){
         this.file = file;
         this.environment = environment;
+        this.registry = registry;
         if (createNewResources != null) this.createNewResources = createNewResources;
         if (servicesOnly != null) this.servicesOnly = servicesOnly;
         if (ignoreServices != null) this.ignoreServices = ignoreServices;
@@ -60,6 +62,8 @@ public class ApplyStep extends AbstractStepImpl {
     public String getEnvironment() {
         return environment;
     }
+
+    public String getRegistry() { return registry; }
 
     public Boolean getCreateNewResources() {
         return createNewResources;
