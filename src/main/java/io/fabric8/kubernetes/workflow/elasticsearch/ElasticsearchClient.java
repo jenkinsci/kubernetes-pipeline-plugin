@@ -20,6 +20,9 @@ import com.jayway.restassured.response.Response;
 import hudson.model.TaskListener;
 import io.fabric8.utils.Systems;
 
+import java.io.IOException;
+import java.net.InetAddress;
+
 import static com.jayway.restassured.RestAssured.given;
 
 /**
@@ -28,7 +31,6 @@ import static com.jayway.restassured.RestAssured.given;
 public class ElasticsearchClient {
 
     public final static String DEPLOYMENT = "deployment";
-    private final static String ELASTICSEARCH_BASE_UI = "http://elasticsearch:";
     private final static String INDEX = "/pipeline/";
 
     /**
@@ -40,9 +42,18 @@ public class ElasticsearchClient {
      * @return boolean whether event was created in elasticsearch.
      */
     public static boolean sendEvent(String json, String type, TaskListener listener){
+        String baseUri = Systems.getEnvVarOrSystemProperty("ELASTICSEARCH_BASE_UI","http://elasticsearch");
+        try {
+            int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT","20"));
+            InetAddress.getByName(baseUri).isReachable(timeout);
+        } catch (IOException e) {
+            listener.getLogger().println("Unable to connect to Elasticsearch service. Check Elasticsearch is running in the correct namespace.");
+            return false;
+        }
+
         String port = Systems.getEnvVarOrSystemProperty("ELASTICSEARCH_SERVICE_PORT", "9200");
         try {
-            RestAssured.baseURI  = ELASTICSEARCH_BASE_UI + port + INDEX + type;
+            RestAssured.baseURI  = baseUri + ":" + port + INDEX + type;
             Response r = given()
                     .contentType("application/json").
                             body(json).
@@ -52,10 +63,10 @@ public class ElasticsearchClient {
             return r.getBody().jsonPath().get("created");
 
         } catch (Exception e){
-            // handle exceptions as elasticsearch may not be running and we dont want to abort the pipeline
+            // handle exceptions as we dont want to abort the pipeline
             e.printStackTrace(listener.getLogger());
-            listener.getLogger().println("REQUEST: "+json);
-            listener.getLogger().println("Unable to send event `" + type + "` to Elasticsearch. Check Elasticsearch in running in the current namespace.");
+            listener.getLogger().println("Failed to send event: "+json);
+
             return false;
         }
     }
