@@ -104,6 +104,8 @@ You can apply Kubernetes resources in order to create and update pods, services,
 
 Apply changes by passing the JSON formatted resource and the required environment.  If the enlvironment does not exist then a new namespace is created with the environment name.
 
+The KubernetesApply step will enrich Pod or Replication Controller manifests, adding the platform default docker registry if no `registry` parameter set.
+
 
     node {
         def rc = getKubernetesJson {
@@ -111,10 +113,9 @@ Apply changes by passing the JSON formatted resource and the required environmen
           label = 'node'
           icon = 'https://cdn.rawgit.com/fabric8io/fabric8/dc05040/website/src/images/logos/nodejs.svg'
           version = newVersion
-          imageName = clusterImageName
         }
 
-        kubernetesApply(file: rc, environment: 'my-cool-app-staging')
+        kubernetesApply(file: rc, environment: 'my-cool-app-staging', registry: 'myexternalregistry.io:5000')
     }
 
 __NOTE__ By default [DeploymentEvent](https://github.com/fabric8io/kubernetes-workflow/blob/master/src/main/java/io/fabric8/kubernetes/workflow/elasticsearch/DeploymentEvent.java) are sent to elasticsearch (if running in the same namespace) when a pod or replication controller is deployed.
