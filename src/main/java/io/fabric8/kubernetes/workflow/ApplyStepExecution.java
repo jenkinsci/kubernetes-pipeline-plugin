@@ -113,17 +113,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             controller.setNamespace(environment);
 
             // TODO do we need this?
-            String fileName = "generated.json";
+            String fileName = "pipeline.json";
 
-            if (dto instanceof Template) {
-                Template template = (Template) dto;
-                dto = applyTemplates(template, kubernetes, controller, fileName, environment);
-            }
-
-            if (dto instanceof KubernetesList) {
-                KubernetesList list = (KubernetesList) dto;
-                controller.applyList(list, fileName);
-            }
 
             Set<KubernetesList> kubeConfigs = new LinkedHashSet<>();
 
