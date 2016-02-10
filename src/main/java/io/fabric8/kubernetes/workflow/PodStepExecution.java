@@ -60,7 +60,10 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
         //The body is executed async. so we can't use try with resource here.
         final KubernetesFacade kubernetes = new KubernetesFacade();
-        kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
+
+        //Get host using env vars and fallback to computer name (integration point with kubernetes-plugin).
+        String currentPodName = env.get(Constants.HOSTNAME, computer.getName());
+        kubernetes.createPod(currentPodName, podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
         kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 
@@ -79,11 +82,9 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
-    private List<EnvVar> createPodEnv(Map<String,String> env) throws IOException, InterruptedException {
+    private List<EnvVar> createPodEnv(Map<String,String> explicit) throws IOException, InterruptedException {
         List<EnvVar> podEnv = new ArrayList<EnvVar>();
-        if (env == null || env.isEmpty()) {
-            return podEnv;
-        }
+
         EnvVars envReduced = new EnvVars(env);
         EnvVars envHost = computer.getEnvironment();
         envReduced.entrySet().removeAll(envHost.entrySet());
@@ -92,9 +93,10 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
             podEnv.add(new EnvVar(entry.getKey(), entry.getValue(), null));
         }
 
-        for (Map.Entry<String, String> entry : env.entrySet()) {
+        for (Map.Entry<String, String> entry : explicit.entrySet()) {
             podEnv.add(new EnvVar(entry.getKey(), entry.getValue(), null));
         }
+
         return podEnv;
     }
 
