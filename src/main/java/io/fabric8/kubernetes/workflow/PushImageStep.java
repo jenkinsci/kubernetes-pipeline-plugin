@@ -30,6 +30,7 @@ public class PushImageStep extends AbstractDockerStep implements Serializable {
 
     private String tag;
     private Boolean force;
+    private String registry;
     private long timeout = 600000L;
 
     @DataBoundConstructor
@@ -55,6 +56,15 @@ public class PushImageStep extends AbstractDockerStep implements Serializable {
         this.force = force;
     }
 
+    public String getRegistry() {
+        return registry;
+    }
+
+    @DataBoundSetter
+    public void setRegistry(String registry) {
+        this.registry = registry;
+    }
+
     public long getTimeout() {
         return timeout;
     }
@@ -63,6 +73,7 @@ public class PushImageStep extends AbstractDockerStep implements Serializable {
     public void setTimeout(long timeout) {
         this.timeout = timeout;
     }
+
 
     @Extension
     public static class DescriptorImpl extends AbstractStepDescriptorImpl {

@@ -31,4 +31,6 @@ public class Constants {
 
     static final char CTRL_C = '\u0003';
 
+    static final String DEFAULT_DOCKER_REGISTRY = "DEFAULT_DOCKER_REGISTRY";
+
 }
