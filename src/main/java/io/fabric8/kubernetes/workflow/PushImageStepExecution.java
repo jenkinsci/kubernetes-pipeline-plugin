@@ -16,12 +16,15 @@
 
 package io.fabric8.kubernetes.workflow;
 
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
+import io.fabric8.docker.client.utils.RegistryUtils;
 import io.fabric8.docker.dsl.EventListener;
 import io.fabric8.docker.dsl.OutputHandle;
+import io.fabric8.utils.Strings;
 import jenkins.security.MasterToSlaveCallable;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
@@ -31,12 +34,15 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static io.fabric8.kubernetes.workflow.Constants.DEFAULT_DOCKER_REGISTRY;
+
 public class PushImageStepExecution extends AbstractSynchronousStepExecution<Void> {
 
     @Inject
     private PushImageStep step;
 
     @StepContextParameter private FilePath workspace;
+    @StepContextParameter private EnvVars env;
     @StepContextParameter private TaskListener listener;
 
     @Override
@@ -48,7 +54,25 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                 final BlockingQueue queue = new LinkedBlockingQueue();
                 try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
                     listener.getLogger().println("Pushing image:" + step.getName() + " to docker registry.");
-                    handle = client.image().withName(step.getName())
+                    String registry = RegistryUtils.extractRegistry(step.getName());
+                    String image = step.getName();
+
+                    if (registry == null) {
+                        registry = getRegistry();
+                        if (registry == null || registry.isEmpty()) {
+                            throw new IllegalStateException("No registry has been specified neither via DSL nor via Env Variables and Image:" + step.getName()+ "doesn't contain registry information.");
+                        }
+
+                        String imageWithRegistry = registry.endsWith("/") ? registry + step.getName() : registry + "/" + step.getName();
+                        String tag = Strings.isNotBlank(step.getTag()) ? step.getTag() : "latest";
+                        if (!client.image().withName(step.getName()).tag().inRepository(imageWithRegistry).force().withTagName(tag)) {
+                            throw new IllegalStateException("Failed to create tag:" + imageWithRegistry + ":" + step.getTag());
+                        } else {
+                            image = imageWithRegistry;
+                        }
+                    }
+
+                    handle = client.image().withName(image)
                             .push()
                             .usingListener(new EventListener() {
                                 @Override
@@ -85,5 +109,13 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                 return null;
             }
         });
+    }
+
+    private String getRegistry() {
+        if (Strings.isNullOrBlank(step.getRegistry())) {
+            return env.get(DEFAULT_DOCKER_REGISTRY);
+        } else {
+            return step.getRegistry();
+        }
     }
 }

@@ -333,10 +333,14 @@ class Kubernetes implements Serializable {
             return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email)
         }
 
-        void toRegistry() {
+        void toRegistry(String registry) {
             kubernetes.node {
-                kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout, username: username, password: password, email: email)
+                kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout, registry: registry, username: username, password: password, email: email)
             }
+        }
+
+        void toRegistry() {
+            toRegistry('')
         }
     }
 

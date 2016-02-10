@@ -57,6 +57,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.fabric8.kubernetes.workflow.Constants.*;
+
 public class ApplyStepExecution extends AbstractSynchronousStepExecution<String> {
 
     @Inject
@@ -167,7 +169,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
     private String getRegistry() {
         if (Strings.isNullOrBlank(step.getRegistry())) {
-            return env.get("DEFAULT_DOCKER_REGISTRY");
+            return env.get(DEFAULT_DOCKER_REGISTRY);
         } else {
             return step.getRegistry();
         }
