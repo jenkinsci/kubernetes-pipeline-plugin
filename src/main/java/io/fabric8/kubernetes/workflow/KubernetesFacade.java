@@ -18,6 +18,7 @@ package io.fabric8.kubernetes.workflow;
 
 import com.squareup.okhttp.Response;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
@@ -45,6 +46,7 @@ import java.util.logging.Logger;
 
 import static io.fabric8.kubernetes.workflow.Constants.EXIT;
 import static io.fabric8.kubernetes.workflow.Constants.FAILED_PHASE;
+import static io.fabric8.kubernetes.workflow.Constants.KUBERNETES_HOSTNAME;
 import static io.fabric8.kubernetes.workflow.Constants.NEWLINE;
 import static io.fabric8.kubernetes.workflow.Constants.RUNNING_PHASE;
 import static io.fabric8.kubernetes.workflow.Constants.SPACE;
@@ -59,7 +61,7 @@ public final class KubernetesFacade implements Closeable {
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public Pod createPod(String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, String workspace, List<EnvVar> env, String cmd) {
+    public Pod createPod(String hostname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, String workspace, List<EnvVar> env, String cmd) {
         LOGGER.info("Creating pod with name:" + name);
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
@@ -122,12 +124,15 @@ public final class KubernetesFacade implements Closeable {
             volumeIndex++;
         }
 
+        Node node = getNodeOfPod(hostname);
+
         Pod p = client.pods().createNew()
                 .withNewMetadata()
                 .withName(name)
                 .addToLabels("owner", "jenkins")
                 .endMetadata()
                 .withNewSpec()
+                .withNodeSelector(node.getMetadata().getLabels())
                 .withVolumes(volumes)
                 .addNewContainer()
                 .withVolumeMounts(mounts)
@@ -148,6 +153,18 @@ public final class KubernetesFacade implements Closeable {
                 .endSpec()
                 .done();
         return p;
+    }
+
+    private Node getNodeOfPod(String pod) {
+        String hostIp = client.pods().withName(pod).get().getStatus().getHostIP();
+        List<Node> nodes = client.nodes().withLabel(KUBERNETES_HOSTNAME, hostIp).list().getItems();
+        if (nodes.isEmpty()) {
+            throw new IllegalStateException("No node found for pod:" + pod);
+        } else if (nodes.size() > 1) {
+            throw new IllegalStateException("Multiple nodes found for pod:" + pod);
+        } else {
+            return nodes.iterator().next();
+        }
     }
 
     public Boolean deletePod(String name) {

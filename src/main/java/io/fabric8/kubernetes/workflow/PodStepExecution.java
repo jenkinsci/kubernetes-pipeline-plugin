@@ -60,7 +60,10 @@ public class PodStepExecution extends AbstractStepExecutionImpl {
 
         //The body is executed async. so we can't use try with resource here.
         final KubernetesFacade kubernetes = new KubernetesFacade();
-        kubernetes.createPod(podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
+
+        //Get host using env vars and fallback to computer name (integration point with kubernetes-plugin).
+        String currentPodName = env.get(Constants.HOSTNAME, computer.getName());
+        kubernetes.createPod(currentPodName, podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
         kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 

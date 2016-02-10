@@ -33,4 +33,7 @@ public class Constants {
 
     static final String DEFAULT_DOCKER_REGISTRY = "DEFAULT_DOCKER_REGISTRY";
 
+    static final String HOSTNAME = "HOSTNAME";
+    static final String KUBERNETES_HOSTNAME = "kubernetes.io/hostname";
+
 }
