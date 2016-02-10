@@ -39,27 +39,27 @@ class Kubernetes implements Serializable {
     }
 
     public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", Boolean privileged = false, Map<String, String> secrets = new HashMap(), Map<String, String> hostPaths = new HashMap(), Map<String, String> emptyDirs = new HashMap(), Map<String, String> env = new HashMap<>()) {
-        return new Pod(this, name, image, serviceAccount, privileged, secrets, hostPaths, emptyDirs, env);
+        return new Pod(this, name, image, serviceAccount, privileged, secrets, hostPaths, emptyDirs, env)
     }
 
     public Image image() {
-        return new Image(this);
+        return new Image(this)
     }
 
     public Image image(String name) {
-        return new NamedImage(this, name);
+        return new NamedImage(this, name)
     }
 
     public static class Pod implements Serializable {
-        private final Kubernetes kubernetes;
-        private final String name;
-        private final String image;
-        private final String serviceAccount;
-        private final Boolean privileged;
-        private final Map secrets;
-        private final Map hostPathMounts;
-        private final Map emptyDirs;
-        private final Map env;
+        private final Kubernetes kubernetes
+        private final String name
+        private final String image
+        private final String serviceAccount
+        private final Boolean privileged
+        private final Map secrets
+        private final Map hostPathMounts
+        private final Map emptyDirs
+        private final Map env
 
         Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> env) {
             this.kubernetes = kubernetes
@@ -70,51 +70,51 @@ class Kubernetes implements Serializable {
             this.secrets = secrets
             this.hostPathMounts = hostPathMounts
             this.emptyDirs = emptyDirs
-            this.env = env;
+            this.env = env
         }
 
         public Pod withName(String name) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env)
         }
 
         public Pod withImage(String image) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env)
         }
 
         public Pod withServiceAccount(String serviceAccount) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env)
         }
 
         public Pod withPrivileged(Boolean privileged) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env);
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, env)
         }
 
         public Pod withSecret(String secretName, String mountPath) {
-            Map<String, String> newSecrets = new HashMap<>(secrets);
-            newSecrets.put(secretName, mountPath);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, newSecrets, hostPathMounts, emptyDirs, env);
+            Map<String, String> newSecrets = new HashMap<>(secrets)
+            newSecrets.put(secretName, mountPath)
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, newSecrets, hostPathMounts, emptyDirs, env)
         }
 
         public Pod withHostPathMount(String hostPath, String mountPath) {
-            Map<String, String> newHostPathMounts = new HashMap<>(hostPathMounts);
-            newHostPathMounts.put(hostPath, mountPath);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, emptyDirs, env);
+            Map<String, String> newHostPathMounts = new HashMap<>(hostPathMounts)
+            newHostPathMounts.put(hostPath, mountPath)
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, emptyDirs, env)
         }
 
         public Pod withEmptyDir(String mountPath) {
-            return withEmptyDir(mountPath, null);
+            return withEmptyDir(mountPath, null)
         }
 
         public Pod withEmptyDir(String mountPath, String medium) {
-            Set<String> newEmptyDirs = new HashSet<>(emptyDirs);
-            newEmptyDirs.put(emptyDir, medium);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, env);
+            Set<String> newEmptyDirs = new HashSet<>(emptyDirs)
+            newEmptyDirs.put(emptyDir, medium)
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, env)
         }
 
         public Pod withEnvVar(String key, String value) {
-            Map<String, String> newEnv = new HashMap<>(secrets);
-            newEnv.put(key, value);
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newEnv);
+            Map<String, String> newEnv = new HashMap<>(secrets)
+            newEnv.put(key, value)
+            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newEnv)
         }
 
         public <V> V inside(Closure<V> body) {
@@ -128,7 +128,7 @@ class Kubernetes implements Serializable {
 
     public class Image implements Serializable {
 
-        private final Kubernetes kubernetes;
+        private final Kubernetes kubernetes
 
         Image(Kubernetes kubernetes) {
             this.kubernetes = kubernetes
@@ -161,14 +161,14 @@ class Kubernetes implements Serializable {
         }
 
         NamedImage withName(String name) {
-            return new NamedImage(kubernetes, name);
+            return new NamedImage(kubernetes, name)
         }
      }
 
     private static class NamedImage implements Serializable {
 
-        private final Kubernetes kubernetes;
-        private final String name;
+        private final Kubernetes kubernetes
+        private final String name
 
         NamedImage(Kubernetes kubernetes, String name) {
             this.kubernetes = kubernetes
@@ -181,15 +181,15 @@ class Kubernetes implements Serializable {
 
 
         BuildImage build() {
-            return new BuildImage(kubernetes, name, false, 600000L, null, null, null);
+            return new BuildImage(kubernetes, name, false, 600000L, null, null, null)
         }
 
         PushImage push() {
-            return new PushImage(kubernetes, name, null, false, 600000L, null, null, null);
+            return new PushImage(kubernetes, name, null, false, 600000L, null, null, null)
         }
 
         void tag() {
-            new TagImage(kubernetes, name, null, null, null, null, null);
+            new TagImage(kubernetes, name, null, null, null, null, null)
         }
     }
 
@@ -217,38 +217,38 @@ class Kubernetes implements Serializable {
         }
 
         BuildImage removingIntermediate(Boolean rm) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
         }
 
         BuildImage withTimeout(long timeout) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
         }
 
         BuildImage withUsername(String username) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
         }
 
         BuildImage withPassword(String password) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
         }
 
         BuildImage withEmail(String email) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email);
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
         }
 
         Pod fromPath(String path) {
             kubernetes.node {
-                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email);
+                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email)
             }
             return new NamedImage(kubernetes, name).toPod()
         }
     }
 
     private static class TagImage implements Serializable {
-        private final Kubernetes kubernetes;
-        private final String name;
-        private final String repo;
-        private final String tagName;
+        private final Kubernetes kubernetes
+        private final String name
+        private final String repo
+        private final String tagName
         private final String username
         private final String password
         private final String email
@@ -264,34 +264,34 @@ class Kubernetes implements Serializable {
         }
 
         TagImage inRepository(String repo) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
         }
 
         TagImage withUsername(String username) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
         }
 
         TagImage withPassword(String password) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
         }
 
         TagImage withEmail(String email) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email);
+            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
         }
 
         void withTag(String tagName) {
             kubernetes.node {
-                kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, username: username, password: password, email: email);
+                kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, username: username, password: password, email: email)
             }
         }
     }
 
     private static class PushImage implements Serializable {
-        private final Kubernetes kubernetes;
-        private final String name;
-        private final String tagName;
-        private final Boolean force;
-        private final long timeout;
+        private final Kubernetes kubernetes
+        private final String name
+        private final String tagName
+        private final Boolean force
+        private final long timeout
         private final String username
         private final String password
         private final String email
@@ -310,65 +310,65 @@ class Kubernetes implements Serializable {
         }
 
         PushImage force() {
-            return new PushImage(kubernetes, name, tagName, true, timeout, username, password, email);
+            return new PushImage(kubernetes, name, tagName, true, timeout, username, password, email)
         }
 
         PushImage withTag(String tagName) {
-            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email)
         }
 
         PushImage withTimeout(long timeout) {
-            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email)
         }
 
         PushImage withUsername(String username) {
-            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email)
         }
 
         PushImage withPassword(String password) {
-            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email)
         }
 
         PushImage withEmail(String email) {
-            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email);
+            return new PushImage(kubernetes, name, tagName, force, timeout, username, password, email)
         }
 
         void toRegistry() {
             kubernetes.node {
-                kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout, username: username, password: password, email: email);
+                kubernetes.script.pushImage(name: name, force: force, tagName: tagName, timeout: timeout, username: username, password: password, email: email)
             }
         }
     }
 
     public String apply(String file, String environment) {
-        return new Apply(this, file, environment, true, false, false, false, false, false, true, true);
+        return new Apply(this, file, environment, true, false, false, false, false, false, true, true)
     }
 
     public static class Apply implements Serializable {
-        private final Kubernetes kubernetes;
-        private final String file;
-        private final String environment;
-        private final Boolean createNewResources;
-        private final Boolean servicesOnly;
-        private final Boolean ignoreServices;
-        private final Boolean ignoreRunningOAuthClients;
-        private final Boolean processTemplatesLocally;
-        private final Boolean deletePodsOnReplicationControllerUpdate;
-        private final Boolean rollingUpgrades;
-        private final Boolean rollingUpgradePreserveScale;
+        private final Kubernetes kubernetes
+        private final String file
+        private final String environment
+        private final Boolean createNewResources
+        private final Boolean servicesOnly
+        private final Boolean ignoreServices
+        private final Boolean ignoreRunningOAuthClients
+        private final Boolean processTemplatesLocally
+        private final Boolean deletePodsOnReplicationControllerUpdate
+        private final Boolean rollingUpgrades
+        private final Boolean rollingUpgradePreserveScale
 
-        Apply(Kubernetes kubernetes, String file, String environment, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale){
+        Apply(Kubernetes kubernetes, String file, String environment, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale) {
             this.kubernetes = kubernetes
-            this.file = file;
-            this.environment = environment;
-            this.createNewResources = createNewResources;
-            this.servicesOnly = servicesOnly;
-            this.ignoreServices = ignoreServices;
-            this.ignoreRunningOAuthClients = ignoreRunningOAuthClients;
-            this.processTemplatesLocally = processTemplatesLocally;
-            this.deletePodsOnReplicationControllerUpdate = deletePodsOnReplicationControllerUpdate;
-            this.rollingUpgrades = rollingUpgrades;
-            this.rollingUpgradePreserveScale = rollingUpgradePreserveScale;
+            this.file = file
+            this.environment = environment
+            this.createNewResources = createNewResources
+            this.servicesOnly = servicesOnly
+            this.ignoreServices = ignoreServices
+            this.ignoreRunningOAuthClients = ignoreRunningOAuthClients
+            this.processTemplatesLocally = processTemplatesLocally
+            this.deletePodsOnReplicationControllerUpdate = deletePodsOnReplicationControllerUpdate
+            this.rollingUpgrades = rollingUpgrades
+            this.rollingUpgradePreserveScale = rollingUpgradePreserveScale
 
         }
 
@@ -377,7 +377,7 @@ class Kubernetes implements Serializable {
          * before creating/updating any pods and replication controllers
          */
         public Apply withEnvironment(String environment) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
 
@@ -385,7 +385,7 @@ class Kubernetes implements Serializable {
          * Should we create new kubernetes resources?
          */
         public Apply withCreateNewResources(Boolean createNewResources) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
         /**
@@ -393,7 +393,7 @@ class Kubernetes implements Serializable {
          * before creating/updating any pods and replication controllers
          */
         public Apply withServicesOnly(Boolean servicesOnly) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
         /**
@@ -403,7 +403,7 @@ class Kubernetes implements Serializable {
          * the service.
          */
         public Apply withIgnoreServices(Boolean ignoreServices) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
         /**
@@ -411,32 +411,32 @@ class Kubernetes implements Serializable {
          * so we should not try to update or create/delete global oauth clients
          */
         public Apply withIgnoreRunningOAuthClients(Boolean ignoreRunningOAuthClients) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
         /**
          * Process templates locally in Java so that we can apply OpenShift templates on any Kubernetes environment
          */
         public Apply withProcessTemplatesLocally(Boolean processTemplatesLocally) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
         /**
          * Should we delete all the pods if we update a Replication Controller
          */
         public Apply withDeletePodsOnReplicationControllerUpdate(Boolean deletePodsOnReplicationControllerUpdate) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
         /**
          * Should we use rolling upgrades to apply changes?
          */
         public Apply withRollingUpgrades(Boolean rollingUpgrades) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
 
         public Apply withRollingUpgradePreserveScale(Boolean rollingUpgradePreserveScale) {
-            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale);
+            return new Apply(kubernetes, file, environment,createNewResources, servicesOnly, ignoreServices, ignoreRunningOAuthClients, processTemplatesLocally, deletePodsOnReplicationControllerUpdate, rollingUpgrades, rollingUpgradePreserveScale)
         }
         public void apply() {
             kubernetes.node {
@@ -446,18 +446,18 @@ class Kubernetes implements Serializable {
     }
 
     public String sendEvent(String json, String elasticsearchType = 'custom') {
-        return new SendEvent(this, json, elasticsearchType);
+        return new SendEvent(this, json, elasticsearchType)
     }
 
     public static class SendEvent implements Serializable {
-        private final Kubernetes kubernetes;
-        private final String json;
-        private final String elasticsearchType;
+        private final Kubernetes kubernetes
+        private final String json
+        private final String elasticsearchType
 
         SendEvent(Kubernetes kubernetes, String json, String elasticsearchType){
             this.kubernetes = kubernetes
-            this.json = json;
-            this.elasticsearchType = elasticsearchType;
+            this.json = json
+            this.elasticsearchType = elasticsearchType
 
         }
 
@@ -465,14 +465,14 @@ class Kubernetes implements Serializable {
          * The json payload to send to elasticsearch
          */
         public SendEvent withJson(String json) {
-            return new SendEvent(kubernetes, json, elasticsearchType);
+            return new SendEvent(kubernetes, json, elasticsearchType)
         }
 
         /**
          * The elasticsearch type the index uses See {@linktourl https://www.elastic.co/guide/en/elasticsearch/guide/current/mapping.html#mapping}
          */
         public SendEvent withElasticsearchType(String elasticsearchType) {
-            return new SendEvent(kubernetes, json, elasticsearchType);
+            return new SendEvent(kubernetes, json, elasticsearchType)
         }
 
         /**
