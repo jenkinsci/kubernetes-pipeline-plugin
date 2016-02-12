@@ -31,9 +31,12 @@ public class Constants {
 
     static final char CTRL_C = '\u0003';
 
+    static final String DOCKER_IGNORE = ".dockerignore";
     static final String DEFAULT_DOCKER_REGISTRY = "DEFAULT_DOCKER_REGISTRY";
 
     static final String HOSTNAME = "HOSTNAME";
     static final String KUBERNETES_HOSTNAME = "kubernetes.io/hostname";
+
+    static final String[] DEFAULT_IGNORE_PATTERNS = {DOCKER_IGNORE, ".git", ".git/*"};
 
 }

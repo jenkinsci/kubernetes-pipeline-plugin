@@ -22,17 +22,15 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.util.io.Archiver;
 import hudson.util.io.ArchiverFactory;
-import io.fabric8.docker.client.Config;
-import io.fabric8.docker.client.ConfigBuilder;
 import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
+import io.fabric8.docker.client.utils.DockerIgnorePathMatcher;
 import io.fabric8.docker.dsl.EventListener;
 import io.fabric8.docker.dsl.OutputHandle;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
 import java.io.File;
@@ -43,11 +41,15 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -55,7 +57,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+
+import static io.fabric8.kubernetes.workflow.Constants.DEFAULT_IGNORE_PATTERNS;
+import static io.fabric8.kubernetes.workflow.Constants.DOCKER_IGNORE;
 
 public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Void> {
 
@@ -64,9 +70,12 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
     @Inject
     private BuildImageStep step;
 
-    @StepContextParameter private FilePath workspace;
-    @StepContextParameter private TaskListener listener;
-    @StepContextParameter private transient EnvVars env;
+    @StepContextParameter
+    private FilePath workspace;
+    @StepContextParameter
+    private TaskListener listener;
+    @StepContextParameter
+    private transient EnvVars env;
 
     @Override
     protected Void run() throws Exception {
@@ -190,6 +199,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
     private class DockerImageArchiver extends Archiver {
 
         private final TarArchiveOutputStream tout;
+        private final AtomicBoolean first = new AtomicBoolean(true);
 
         private DockerImageArchiver(TarArchiveOutputStream tarOutputStream) {
             this.tout = tarOutputStream;
@@ -203,20 +213,43 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
         @Override
         public void visit(final File rootFile, String relativePath) throws IOException {
             final Path root = rootFile.toPath();
-            Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    final Path relativePath = root.relativize(file);
-                    final TarArchiveEntry entry = new TarArchiveEntry(file.toFile());
-                    entry.setName(relativePath.toString());
-                    entry.setMode(TarArchiveEntry.DEFAULT_FILE_MODE);
-                    entry.setSize(attrs.size());
-                    tout.putArchiveEntry(entry);
-                    Files.copy(file, tout);
-                    tout.closeArchiveEntry();
-                    return FileVisitResult.CONTINUE;
-                }
-            });
+            //We can't rely on the visit, visiting every single file here, so we just visit the root and we Files.walkFileTree from there....
+            if (first.compareAndSet(true, false)) {
+                Path dockerIgnorePath = root.resolve(DOCKER_IGNORE);
+                final DockerIgnorePathMatcher dockerIgnorePathMatcher = dockerIgnorePath.toFile().exists() ?
+                        new DockerIgnorePathMatcher(apply(root, Files.readAllLines(dockerIgnorePath, Charset.defaultCharset()))) :
+                        new DockerIgnorePathMatcher(apply(root, DEFAULT_IGNORE_PATTERNS));
+
+                Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        if (dockerIgnorePathMatcher.matches(file)) {
+                            return FileVisitResult.SKIP_SUBTREE;
+                        }
+                        final Path relativePath = root.relativize(file);
+                        final TarArchiveEntry entry = new TarArchiveEntry(file.toFile());
+                        entry.setName(relativePath.toString());
+                        entry.setMode(TarArchiveEntry.DEFAULT_FILE_MODE);
+                        entry.setSize(attrs.size());
+                        tout.putArchiveEntry(entry);
+                        Files.copy(file, tout);
+                        tout.closeArchiveEntry();
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+            }
         }
+    }
+
+    private static List<String> apply(Path path, Collection<String> patterns) {
+        return apply(path, patterns.toArray(new String[patterns.size()]));
+    }
+
+    private static List<String> apply(Path path, String... patterns) {
+        List<String> result = new ArrayList<>();
+        for (String p : patterns) {
+            result.add(path.endsWith(File.separator) ? path + p : path + File.separator + p);
+        }
+        return result;
     }
 }
