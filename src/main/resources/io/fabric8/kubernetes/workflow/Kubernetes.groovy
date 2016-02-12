@@ -181,7 +181,7 @@ class Kubernetes implements Serializable {
 
 
         BuildImage build() {
-            return new BuildImage(kubernetes, name, false, 600000L, null, null, null)
+            return new BuildImage(kubernetes, name, false, 600000L, null, null, null, new HashSet<String>())
         }
 
         PushImage push() {
@@ -201,8 +201,9 @@ class Kubernetes implements Serializable {
         private final String username
         private final String password
         private final String email
+        private final Set<String> ignorePatterns
 
-        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout, String username, String password, String email) {
+        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout, String username, String password, String email, Set<String> ignorePatterns) {
             this.kubernetes = kubernetes
             this.name = name
             this.rm = rm
@@ -210,6 +211,7 @@ class Kubernetes implements Serializable {
             this.username = username
             this.password = password
             this.email = email
+            this.ignorePatterns = ignorePatterns != null ? ignorePatterns : new HashSet<String>()
         }
 
         BuildImage removingIntermediate() {
@@ -217,28 +219,34 @@ class Kubernetes implements Serializable {
         }
 
         BuildImage removingIntermediate(Boolean rm) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email, ignorePatterns)
         }
 
         BuildImage withTimeout(long timeout) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email, ignorePatterns)
         }
 
         BuildImage withUsername(String username) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email, ignorePatterns)
         }
 
         BuildImage withPassword(String password) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email, ignorePatterns)
         }
 
         BuildImage withEmail(String email) {
-            return new BuildImage(kubernetes, name, rm, timeout, username, password, email)
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email, ignorePatterns)
+        }
+
+        BuildImage ignoringPattern(String pattern) {
+            Set<String> newIgnorePatterns = new HashSet<>(ignorePatterns)
+            newIgnorePatterns.add(pattern)
+            return new BuildImage(kubernetes, name, rm, timeout, username, password, email, newIgnorePatterns)
         }
 
         Pod fromPath(String path) {
             kubernetes.node {
-                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email)
+                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email, ignorePatterns: ignorePatterns)
             }
             return new NamedImage(kubernetes, name).toPod()
         }
