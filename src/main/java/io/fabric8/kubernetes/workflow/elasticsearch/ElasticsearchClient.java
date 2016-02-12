@@ -65,7 +65,7 @@ public class ElasticsearchClient {
         } catch (Exception e){
             // handle exceptions as we dont want to abort the pipeline
             e.printStackTrace(listener.getLogger());
-            listener.getLogger().println("Failed to send event: "+json);
+            listener.error("Failed to send event: "+json);
 
             return false;
         }
