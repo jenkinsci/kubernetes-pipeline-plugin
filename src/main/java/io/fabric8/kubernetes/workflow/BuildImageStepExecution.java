@@ -48,8 +48,11 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -216,10 +219,21 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
             //We can't rely on the visit, visiting every single file here, so we just visit the root and we Files.walkFileTree from there....
             if (first.compareAndSet(true, false)) {
                 Path dockerIgnorePath = root.resolve(DOCKER_IGNORE);
-                final DockerIgnorePathMatcher dockerIgnorePathMatcher = dockerIgnorePath.toFile().exists() ?
-                        new DockerIgnorePathMatcher(apply(root, Files.readAllLines(dockerIgnorePath, Charset.defaultCharset()))) :
-                        new DockerIgnorePathMatcher(apply(root, DEFAULT_IGNORE_PATTERNS));
+                Set<String> ignorePatterns = new LinkedHashSet<>();
 
+                if (dockerIgnorePath.toFile().exists()) {
+                    ignorePatterns.addAll(Files.readAllLines(dockerIgnorePath, Charset.defaultCharset()));
+                }
+
+                if (!step.getIgnorePatterns().isEmpty()) {
+                    ignorePatterns.addAll(step.getIgnorePatterns());
+                }
+
+                if (ignorePatterns.isEmpty()) {
+                    ignorePatterns.addAll(Arrays.asList(DEFAULT_IGNORE_PATTERNS));
+                }
+
+                final DockerIgnorePathMatcher dockerIgnorePathMatcher = new DockerIgnorePathMatcher(apply(root, ignorePatterns));
                 Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
