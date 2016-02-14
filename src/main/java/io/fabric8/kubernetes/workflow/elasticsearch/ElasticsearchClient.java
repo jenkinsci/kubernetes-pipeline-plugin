@@ -42,18 +42,19 @@ public class ElasticsearchClient {
      * @return boolean whether event was created in elasticsearch.
      */
     public static boolean sendEvent(String json, String type, TaskListener listener){
-        String baseUri = Systems.getEnvVarOrSystemProperty("ELASTICSEARCH_BASE_UI","http://elasticsearch");
+        String protocol = Systems.getEnvVarOrSystemProperty("PIPELINE_ELASTICSEARCH_PROTOCOL","http");
+        String server = Systems.getEnvVarOrSystemProperty("PIPELINE_ELASTICSEARCH_HOST","elasticsearch");
         try {
             int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT","20"));
-            InetAddress.getByName(baseUri).isReachable(timeout);
+            InetAddress.getByName(server).isReachable(timeout);
         } catch (IOException e) {
-            listener.getLogger().println("Unable to connect to Elasticsearch service. Check Elasticsearch is running in the correct namespace.");
+            listener.getLogger().println("Unable to connect to Elasticsearch service. Check Elasticsearch is running in the correct namespace." +e.getMessage());
             return false;
         }
 
         String port = Systems.getEnvVarOrSystemProperty("ELASTICSEARCH_SERVICE_PORT", "9200");
         try {
-            RestAssured.baseURI  = baseUri + ":" + port + INDEX + type;
+            RestAssured.baseURI  = protocol + "://" + server + ":" + port + INDEX + type;
             Response r = given()
                     .contentType("application/json").
                             body(json).
@@ -65,7 +66,7 @@ public class ElasticsearchClient {
         } catch (Exception e){
             // handle exceptions as we dont want to abort the pipeline
             e.printStackTrace(listener.getLogger());
-            listener.getLogger().println("Failed to send event: "+json);
+            listener.error("Failed to send event: "+json);
 
             return false;
         }
