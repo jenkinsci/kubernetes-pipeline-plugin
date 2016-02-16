@@ -5,13 +5,10 @@
     <f:entry field="name" title="Image name">
         <f:textbox/>
     </f:entry>
-    <f:entry field="repo" title="The image repository">
+    <f:entry field="registry" title="The image repository">
             <f:textbox/>
     </f:entry>
         <f:entry field="tag" title="The tag">
             <f:textbox/>
         </f:entry>
-    <f:entry field="force" title="Force Tag">
-        <f:checkbox/>
-    </f:entry>
 </j:jelly>
