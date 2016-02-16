@@ -30,6 +30,7 @@ public class TagImageStep extends AbstractDockerStep implements Serializable {
 
     private final String tag;
     private String repo;
+    private Boolean force;
 
     @DataBoundConstructor
     public TagImageStep(String name, String tag) {
@@ -49,6 +50,15 @@ public class TagImageStep extends AbstractDockerStep implements Serializable {
     @DataBoundSetter
     public void setRepo(String repo) {
         this.repo = repo;
+    }
+
+    public Boolean getForce() {
+        return force;
+    }
+
+    @DataBoundSetter
+    public void setForce(Boolean force) {
+        this.force = force;
     }
 
     @Extension

@@ -189,7 +189,7 @@ class Kubernetes implements Serializable {
         }
 
         void tag() {
-            new TagImage(kubernetes, name, null, null, null, null, null)
+            new TagImage(kubernetes, name, null, null, false, null, null, null)
         }
     }
 
@@ -257,39 +257,45 @@ class Kubernetes implements Serializable {
         private final String name
         private final String repo
         private final String tagName
+        private final Boolean force
         private final String username
         private final String password
         private final String email
 
-        TagImage(Kubernetes kubernetes, String name, String repo, String tagName, String username, String password, String email) {
+        TagImage(Kubernetes kubernetes, String name, String repo, String tagName, Boolean force, String username, String password, String email) {
             this.kubernetes = kubernetes
             this.name = name
             this.repo = repo
             this.tagName = tagName
+            this.force = force
             this.username = username
             this.password = password
             this.email = email
         }
 
         TagImage inRepository(String repo) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
+            return new TagImage(kubernetes, name, repo, tagName, force, username, password, email)
+        }
+
+        TagImage force() {
+            return new TagImage(kubernetes, name, repo, tagName, true, username, password, email)
         }
 
         TagImage withUsername(String username) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
+            return new TagImage(kubernetes, name, repo, tagName, force, username, password, email)
         }
 
         TagImage withPassword(String password) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
+            return new TagImage(kubernetes, name, repo, tagName, force, username, password, email)
         }
 
         TagImage withEmail(String email) {
-            return new TagImage(kubernetes, name, repo, tagName, username, password, email)
+            return new TagImage(kubernetes, name, repo, tagName, force, username, password, email)
         }
 
         void withTag(String tagName) {
             kubernetes.node {
-                kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, username: username, password: password, email: email)
+                kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, force: force, username: username, password: password, email: email)
             }
         }
     }
