@@ -22,6 +22,7 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.util.io.Archiver;
 import hudson.util.io.ArchiverFactory;
+import io.fabric8.docker.api.model.ImageInspect;
 import io.fabric8.docker.client.DefaultDockerClient;
 import io.fabric8.docker.client.DockerClient;
 import io.fabric8.docker.client.utils.DockerIgnorePathMatcher;
@@ -66,7 +67,7 @@ import java.util.logging.Logger;
 import static io.fabric8.kubernetes.workflow.Constants.DEFAULT_IGNORE_PATTERNS;
 import static io.fabric8.kubernetes.workflow.Constants.DOCKER_IGNORE;
 
-public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Void> {
+public class BuildImageStepExecution extends AbstractSynchronousStepExecution<ImageInspect> {
 
     private static final transient Logger LOGGER = Logger.getLogger(BuildImageStepExecution.class.getName());
 
@@ -81,22 +82,27 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
     private transient EnvVars env;
 
     @Override
-    protected Void run() throws Exception {
-        return workspace.getChannel().call(new MasterToSlaveCallable<Void, Exception>() {
+    protected ImageInspect run() throws Exception {
+        return workspace.getChannel().call(new MasterToSlaveCallable<ImageInspect, Exception>() {
             @Override
-            public Void call() throws Exception {
+            public ImageInspect call() throws Exception {
                 ExecutorService executorService = Executors.newFixedThreadPool(2);
                 try (PipedInputStream pin = new PipedInputStream();
                      PipedOutputStream pout = new PipedOutputStream(pin)) {
 
                     Future<Boolean> createTarFuture = executorService.submit(new CreateTarTask(pout));
-                    Future<Boolean> buildImageFuture = executorService.submit(new BuildImageTask(pin));
+                    Future<ImageInspect> buildImageFuture = executorService.submit(new BuildImageTask(pin));
 
                     //Wait for the two tasks to complete.
                     if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
                         listener.getLogger().println("Failed to create docker image tarball.");
-                    } else if (!buildImageFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
-                        listener.getLogger().println("Failed to build docker image.");
+                    }
+
+                    ImageInspect imageInspect = buildImageFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS);
+                    if (imageInspect == null) {
+                        throw new RuntimeException("Failed to build docker image.");
+                    } else {
+                        return imageInspect;
                     }
                 } finally {
                     executorService.shutdown();
@@ -104,13 +110,11 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
                         executorService.shutdownNow();
                     }
                 }
-
-                return null; //Void
             }
         });
     }
 
-    private class BuildImageTask implements Callable<Boolean> {
+    private class BuildImageTask implements Callable<ImageInspect> {
 
         private final InputStream inputStream;
 
@@ -119,7 +123,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
         }
 
         @Override
-        public Boolean call() throws Exception {
+        public ImageInspect call() throws Exception {
             OutputHandle handle = null;
             try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
                 final BlockingQueue queue = new LinkedBlockingQueue();
@@ -152,7 +156,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
                 } else if (result instanceof Throwable) {
                     throw new RuntimeException((Throwable) result);
                 } else {
-                    return true;
+                    return client.image().withName(step.getName()).inspect();
                 }
             } finally {
                 if (handle != null) {
@@ -225,7 +229,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Vo
                     ignorePatterns.addAll(Files.readAllLines(dockerIgnorePath, Charset.defaultCharset()));
                 }
 
-                if (!step.getIgnorePatterns().isEmpty()) {
+                if (step.getIgnorePatterns() != null && !step.getIgnorePatterns().isEmpty()) {
                     ignorePatterns.addAll(step.getIgnorePatterns());
                 }
 
