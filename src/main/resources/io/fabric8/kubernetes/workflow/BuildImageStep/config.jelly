@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:entry field="name" title="Image name">
+        <f:textbox/>
+    </f:entry>
+    <f:entry field="path" title="The path of the image">
+            <f:textbox/>
+    </f:entry>
+    <f:entry field="rm" title="Remove intermediate layers">
+        <f:checkbox/>
+    </f:entry>
+    <f:entry field="timeout" title="The time to wait for the build to complete">
+        <f:textbox/>
+    </f:entry>
+      <f:entry title="${%Ignore Patterns}" description="${%List of docker ignore patterns}">
+        <f:repeatableHeteroProperty field="ignorePatterns" hasHeader="true" addCaption="Add Ignore Pattern"
+                                    deleteCaption="Delete Ignore Pattern" />
+      </f:entry>
+</j:jelly>

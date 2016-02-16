@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+    <p>
+        The <code>kubernetes</code> variable offers convenient access to Kubernetes and Docker related functions from a Workflow script.
+    </p>
+    <p>
+        Methods needing a slave will implicitly run a <code>node {…}</code> block if you have not wrapped them in one.
+        It is a good idea to enclose a block of steps which should all run on the same node in such a block yourself.
+    </p>
+    <p>
+        If you are using Kubernetes build pods, then you must ensure that <code>node {…}</code> should be able to share its workspace.
+        This requires that the node is exposing the workspace as hostPath volume mount.
+    </p>
+</j:jelly>
