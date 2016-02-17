@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    Collects all Fabric8 Workflow Plugins into One.
+</div>
