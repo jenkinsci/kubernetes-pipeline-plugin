@@ -32,7 +32,7 @@
     <packaging>hpi</packaging>
 
     <properties>
-        <docker-client.version>1.0.5</docker-client.version>
+        <docker-client.version>1.0.7</docker-client.version>
         <es.version>2.1.1</es.version>
         <fabric8.version>2.2.91</fabric8.version>
         <git-client.version>1.19.2</git-client.version>

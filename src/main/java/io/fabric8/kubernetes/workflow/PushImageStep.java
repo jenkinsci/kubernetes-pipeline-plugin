@@ -29,7 +29,6 @@ public class PushImageStep extends AbstractDockerStep implements Serializable {
     private static final long serialVersionUID = -6633237919456764764L;
 
     private String tag;
-    private Boolean force;
     private String registry;
     private long timeout = 600000L;
 
@@ -45,15 +44,6 @@ public class PushImageStep extends AbstractDockerStep implements Serializable {
     @DataBoundSetter
     public void setTag(String tag) {
         this.tag = tag;
-    }
-
-    public Boolean getForce() {
-        return force;
-    }
-
-    @DataBoundSetter
-    public void setForce(Boolean force) {
-        this.force = force;
     }
 
     public String getRegistry() {
