@@ -28,6 +28,7 @@
     <groupId>io.fabric8.workflow</groupId>
     <artifactId>devops-steps</artifactId>
     <name>Fabric8 :: Workflow :: DevOps Steps</name>
+    <packaging>hpi</packaging>
 
     <dependencies>
         <dependency>
