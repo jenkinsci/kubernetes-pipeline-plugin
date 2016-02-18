@@ -64,7 +64,14 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
 
         //Get host using env vars and fallback to computer name (integration point with kubernetes-plugin).
         String currentPodName = env.get(Constants.HOSTNAME, computer.getName());
-        kubernetes.createPod(currentPodName, podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(), step.getSecrets(), step.getHostPathMounts(), step.getEmptyDirs(), workspace.getRemote(), createPodEnv(step.getEnv()), "cat");
+        kubernetes.createPod(currentPodName, podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(),
+                KeyValue.toMap(step.getSecrets()),
+                KeyValue.toMap(step.getHostPathMounts()),
+                KeyValue.toMap(step.getEmptyDirs()),
+                workspace.getRemote(),
+                createPodEnv(
+                        KeyValue.toMap(step.getEnv())
+                ), "cat");
         kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 
