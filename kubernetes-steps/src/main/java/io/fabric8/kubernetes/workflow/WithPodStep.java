@@ -23,11 +23,12 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-public class PodStep extends AbstractStepImpl implements Serializable {
+public class WithPodStep extends AbstractStepImpl implements Serializable {
 
     private static final long serialVersionUID = 5588861066775717487L;
 
@@ -35,21 +36,21 @@ public class PodStep extends AbstractStepImpl implements Serializable {
     private final String image;
     private final String serviceAccount;
     private final Boolean privileged;
-    private final Map secrets;
-    private final Map hostPathMounts;
-    private final Map emptyDirs;
-    private final Map env;
+    private final KeyValue[] secrets;
+    private final KeyValue[] hostPathMounts;
+    private final KeyValue[] emptyDirs;
+    private final KeyValue[] env;
 
     @DataBoundConstructor
-    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map env) {
+    public WithPodStep(String name, String image, String serviceAccount, Boolean privileged, KeyValue[] secrets, KeyValue[] hostPathMounts, KeyValue[] emptyDirs, KeyValue[] env) {
         this.name = name;
         this.image = image;
         this.serviceAccount = serviceAccount;
         this.privileged = privileged;
-        this.secrets = secrets != null ? secrets : new HashMap();
-        this.hostPathMounts = hostPathMounts != null ? hostPathMounts : new HashMap();
-        this.emptyDirs = emptyDirs != null ? emptyDirs : new HashMap();
-        this.env = env != null ? env : new HashMap();
+        this.secrets = secrets != null ? secrets : new KeyValue[0];
+        this.hostPathMounts = hostPathMounts != null ? hostPathMounts : new KeyValue[0];
+        this.emptyDirs = emptyDirs != null ? emptyDirs : new KeyValue[0];
+        this.env = env != null ? env : new KeyValue[0];
     }
 
     public String getName() {
@@ -68,19 +69,19 @@ public class PodStep extends AbstractStepImpl implements Serializable {
         return privileged;
     }
 
-    public Map<String, String> getSecrets() {
+    public KeyValue[] getSecrets() {
         return secrets;
     }
 
-    public Map<String, String> getHostPathMounts() {
+    public KeyValue[] getHostPathMounts() {
         return hostPathMounts;
     }
 
-    public  Map<String, String> getEmptyDirs() {
+    public KeyValue[] getEmptyDirs() {
         return emptyDirs;
     }
 
-    public Map<String, String> getEnv() {
+    public KeyValue[] getEnv() {
         return env;
     }
 
@@ -88,7 +89,7 @@ public class PodStep extends AbstractStepImpl implements Serializable {
     public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
        public DescriptorImpl() {
-            super(PodStepExecution.class);
+            super(WithPodStepExecution.class);
         }
 
         public DescriptorImpl(Class<? extends StepExecution> executionType) {
@@ -97,12 +98,12 @@ public class PodStep extends AbstractStepImpl implements Serializable {
 
         @Override
         public String getFunctionName() {
-            return "withKubernetesPod";
+            return "withPod";
         }
 
         @Override
         public String getDisplayName() {
-            return "Run build steps as a Kubernetes Pod";
+            return "Run build steps in a Pod";
         }
 
         @Override
