@@ -119,7 +119,7 @@ class Kubernetes implements Serializable {
 
         public <V> V inside(Closure<V> body) {
             kubernetes.node {
-                kubernetes.script.withKubernetesPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, emptyDirs: emptyDirs, env: env) {
+                kubernetes.script.withPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, emptyDirs: emptyDirs, env: env) {
                     body()
                 }
             }

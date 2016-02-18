@@ -39,12 +39,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
-public class PodStepExecution extends AbstractStepExecutionImpl {
+public class WithPodStepExecution extends AbstractStepExecutionImpl {
 
-    private static final transient Logger LOGGER = Logger.getLogger(PodStepExecution.class.getName());
+    private static final transient Logger LOGGER = Logger.getLogger(WithPodStepExecution.class.getName());
 
     @Inject
-    private PodStep step;
+    private WithPodStep step;
     @StepContextParameter private transient FilePath workspace;
     @StepContextParameter private transient EnvVars env;
     @StepContextParameter private transient TaskListener listener;

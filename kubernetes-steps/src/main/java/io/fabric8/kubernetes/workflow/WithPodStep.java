@@ -25,9 +25,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
-public class PodStep extends AbstractStepImpl implements Serializable {
+public class WithPodStep extends AbstractStepImpl implements Serializable {
 
     private static final long serialVersionUID = 5588861066775717487L;
 
@@ -41,7 +40,7 @@ public class PodStep extends AbstractStepImpl implements Serializable {
     private final Map env;
 
     @DataBoundConstructor
-    public PodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map env) {
+    public WithPodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map env) {
         this.name = name;
         this.image = image;
         this.serviceAccount = serviceAccount;
@@ -88,7 +87,7 @@ public class PodStep extends AbstractStepImpl implements Serializable {
     public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
        public DescriptorImpl() {
-            super(PodStepExecution.class);
+            super(WithPodStepExecution.class);
         }
 
         public DescriptorImpl(Class<? extends StepExecution> executionType) {
@@ -97,7 +96,7 @@ public class PodStep extends AbstractStepImpl implements Serializable {
 
         @Override
         public String getFunctionName() {
-            return "withKubernetesPod";
+            return "withPod";
         }
 
         @Override
