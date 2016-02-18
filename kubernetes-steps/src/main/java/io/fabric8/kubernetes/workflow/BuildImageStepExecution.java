@@ -19,7 +19,12 @@ package io.fabric8.kubernetes.workflow;
 import com.google.inject.Inject;
 import hudson.EnvVars;
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.model.TaskListener;
+import hudson.os.PosixException;
+import hudson.util.DirScanner;
+import hudson.util.FileVisitor;
+import hudson.util.IOUtils;
 import hudson.util.io.Archiver;
 import hudson.util.io.ArchiverFactory;
 import io.fabric8.docker.api.model.ImageInspect;
@@ -31,23 +36,23 @@ import io.fabric8.docker.dsl.OutputHandle;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.tools.tar.TarEntry;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.Serializable;
-import java.nio.charset.Charset;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -61,11 +66,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 import static io.fabric8.workflow.core.Constants.DEFAULT_IGNORE_PATTERNS;
 import static io.fabric8.workflow.core.Constants.DOCKER_IGNORE;
+import static org.apache.tools.tar.TarConstants.LF_SYMLINK;
 
 public class BuildImageStepExecution extends AbstractSynchronousStepExecution<ImageInspect> {
 
@@ -177,7 +182,9 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
         public Boolean call() throws Exception {
             try {
                 listener.getLogger().printf("Creating tar from path: %s.", step.getPath());
-                workspace.child(step.getPath()).archive(new DockerArchiverFactory(), outputStream, new TrueFileFilter());
+                DockerIgnorePathMatcher matcher = createMatcher(workspace.child(step.getPath()));
+                FileFilter docerIgnoreFilter = new DockerIgnoreFileFilter(matcher);
+                workspace.child(step.getPath()).archive(new DockerArchiverFactory(matcher), outputStream, docerIgnoreFilter);
                 outputStream.flush();
                 outputStream.close();
                 return true;
@@ -195,79 +202,209 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
         }
     }
 
-    private class DockerArchiverFactory extends ArchiverFactory {
+    private class DockerIgnoreFileFilter implements FileFilter, Serializable {
+        private final DockerIgnorePathMatcher dockerIgnorePathMatcher;
+
+        private DockerIgnoreFileFilter(DockerIgnorePathMatcher dockerIgnorePathMatcher) {
+            this.dockerIgnorePathMatcher = dockerIgnorePathMatcher;
+        }
 
         @Override
-        public Archiver create(OutputStream out) throws IOException {
-            return new DockerImageArchiver(new TarArchiveOutputStream(out));
+        public boolean accept(File pathname) {
+            return !dockerIgnorePathMatcher.matches(pathname.toPath().toAbsolutePath());
         }
     }
 
-    private class DockerImageArchiver extends Archiver {
+    public static class MyScanner extends DirScanner {
 
-        private final TarArchiveOutputStream tout;
-        private final AtomicBoolean first = new AtomicBoolean(true);
+        @Override
+        public void scan(File dir, FileVisitor visitor) throws IOException {
 
-        private DockerImageArchiver(TarArchiveOutputStream tarOutputStream) {
-            this.tout = tarOutputStream;
+        }
+    }
+
+    private class DockerArchiverFactory extends ArchiverFactory {
+
+        private final DockerIgnorePathMatcher matcher;
+
+        public DockerArchiverFactory(DockerIgnorePathMatcher matcher) {
+            this.matcher = matcher;
         }
 
         @Override
-        public void close() throws IOException {
-            tout.close();
+        public Archiver create(OutputStream out) throws IOException {
+            return new DockerImageArchiver(out, matcher);
         }
+    }
 
-        @Override
-        public void visit(final File rootFile, String relativePath) throws IOException {
-            final Path root = rootFile.toPath();
-            //We can't rely on the visit, visiting every single file here, so we just visit the root and we Files.walkFileTree from there....
-            if (first.compareAndSet(true, false)) {
-                Path dockerIgnorePath = root.resolve(DOCKER_IGNORE);
-                Set<String> ignorePatterns = new LinkedHashSet<>();
+    private static class DockerImageArchiver extends Archiver {
 
-                if (dockerIgnorePath.toFile().exists()) {
-                    ignorePatterns.addAll(Files.readAllLines(dockerIgnorePath, Charset.defaultCharset()));
-                }
+            private final byte[] buf = new byte[8192];
+            private final TarArchiveOutputStream tar;
+            private final DockerIgnorePathMatcher matcher;
 
-                if (step.getIgnorePatterns() != null && !step.getIgnorePatterns().isEmpty()) {
-                    ignorePatterns.addAll(step.getIgnorePatterns());
-                }
+            DockerImageArchiver(OutputStream out, DockerIgnorePathMatcher matcher) {
+                this.matcher = matcher;
+                tar = new TarArchiveOutputStream(out);
+                tar.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+            }
 
-                if (ignorePatterns.isEmpty()) {
-                    ignorePatterns.addAll(Arrays.asList(DEFAULT_IGNORE_PATTERNS));
-                }
-
-                final DockerIgnorePathMatcher dockerIgnorePathMatcher = new DockerIgnorePathMatcher(apply(root, ignorePatterns));
-                Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        if (dockerIgnorePathMatcher.matches(file)) {
-                            return FileVisitResult.SKIP_SUBTREE;
-                        }
-                        final Path relativePath = root.relativize(file);
-                        final TarArchiveEntry entry = new TarArchiveEntry(file.toFile());
-                        entry.setName(relativePath.toString());
-                        entry.setMode(TarArchiveEntry.DEFAULT_FILE_MODE);
-                        entry.setSize(attrs.size());
-                        tout.putArchiveEntry(entry);
-                        Files.copy(file, tout);
-                        tout.closeArchiveEntry();
-                        return FileVisitResult.CONTINUE;
+            @Override
+            public void visitSymlink(File link, String target, String relativePath) throws IOException {
+                TarArchiveEntry e = new TarArchiveEntry(relativePath, LF_SYMLINK);
+                try {
+                    int mode = IOUtils.mode(link);
+                    if (mode != -1) {
+                        e.setMode(mode);
                     }
-                });
+                } catch (PosixException x) {
+                    // ignore
+                }
+
+                try {
+                    StringBuffer linkName = (StringBuffer) LINKNAME_FIELD.get(e);
+                    linkName.setLength(0);
+                    linkName.append(target);
+                } catch (IllegalAccessException x) {
+                    throw new IOException("Failed to set linkName", x);
+                }
+
+                tar.putArchiveEntry(e);
+                entriesWritten++;
+            }
+
+            @Override
+            public boolean understandsSymlink() {
+                return true;
+            }
+
+        public void visit(File file, String relativePath) throws IOException {
+            if (recursiveMatch(matcher, file.toPath())) {
+                 return;
+            }
+
+            if (relativePath.contains("/")) {
+                relativePath = relativePath.substring(relativePath.indexOf("/") + 1);
+            } else {
+                relativePath = ".";
+            }
+
+            if(Functions.isWindows()) {
+                relativePath = relativePath.replace('\\', '/');
+            }
+
+            if(file.isDirectory()) {
+                relativePath += '/';
+            }
+
+            TarArchiveEntry te = new TarArchiveEntry(file);
+            te.setName(relativePath);
+
+            int mode = IOUtils.mode(file);
+            if (mode!=-1) {
+                te.setMode(mode);
+            }
+            te.setModTime(file.lastModified());
+
+            if(!file.isDirectory()) {
+                te.setSize(file.length());
+            }
+
+            tar.putArchiveEntry(te);
+
+            if (!file.isDirectory()) {
+                FileInputStream in = new FileInputStream(file);
+                try {
+                    int len;
+                    while((len=in.read(buf))>=0)
+                        tar.write(buf,0,len);
+                } finally {
+                    in.close();
+                }
+            }
+
+            tar.closeArchiveEntry();
+            entriesWritten++;
+        }
+
+        public void close() throws IOException {
+            tar.close();
+        }
+
+        private static final Field LINKNAME_FIELD = getTarEntryLinkNameField();
+
+        private static Field getTarEntryLinkNameField() {
+            try {
+                Field f = TarEntry.class.getDeclaredField("linkName");
+                f.setAccessible(true);
+                return f;
+            } catch (SecurityException e) {
+                throw new AssertionError(e);
+            } catch (NoSuchFieldException e) {
+                throw new AssertionError(e);
             }
         }
     }
 
-    private static List<String> apply(Path path, Collection<String> patterns) {
+    private DockerIgnorePathMatcher createMatcher(FilePath root) throws IOException, InterruptedException {
+
+        FilePath dockerIgnorePath = root.child(DOCKER_IGNORE);
+
+        Set<String> ignorePatterns = new LinkedHashSet<>();
+
+        if (dockerIgnorePath.exists()) {
+
+
+            ignorePatterns.addAll(readAllLines(dockerIgnorePath));
+        }
+
+        if (step.getIgnorePatterns() != null && !step.getIgnorePatterns().isEmpty()) {
+            ignorePatterns.addAll(step.getIgnorePatterns());
+        }
+
+        if (ignorePatterns.isEmpty()) {
+            ignorePatterns.addAll(Arrays.asList(DEFAULT_IGNORE_PATTERNS));
+        }
+
+        return new DockerIgnorePathMatcher(apply(root, ignorePatterns));
+    }
+
+
+    public static List<String> readAllLines(FilePath path)
+            throws IOException, InterruptedException {
+        try (InputStream is = path.read();
+             InputStreamReader isr = new InputStreamReader(is);
+             BufferedReader reader = new BufferedReader(isr)) {
+            List<String> result = new ArrayList<>();
+            for (; ; ) {
+                String line = reader.readLine();
+                if (line == null)
+                    break;
+                result.add(line);
+            }
+            return result;
+        }
+    }
+
+    private static List<String> apply(FilePath path, Collection<String> patterns) {
         return apply(path, patterns.toArray(new String[patterns.size()]));
     }
 
-    private static List<String> apply(Path path, String... patterns) {
+    private static List<String> apply(FilePath path, String... patterns) {
         List<String> result = new ArrayList<>();
         for (String p : patterns) {
-            result.add(path.endsWith(File.separator) ? path + p : path + File.separator + p);
+            result.add(path.getRemote().endsWith(File.separator) ? path + p : path + File.separator + p);
         }
         return result;
+    }
+
+    private static boolean recursiveMatch(DockerIgnorePathMatcher match, Path file) {
+        if (match.matches(file)) {
+            return true;
+        } else if (file.getParent() != null) {
+            return recursiveMatch(match, file.getParent());
+        } else {
+            return false;
+        }
     }
 }

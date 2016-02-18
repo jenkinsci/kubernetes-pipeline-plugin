@@ -17,6 +17,7 @@
 package io.fabric8.kubernetes.workflow;
 
 import com.squareup.okhttp.Response;
+import io.fabric8.docker.client.utils.Utils;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -35,6 +36,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +48,6 @@ import java.util.logging.Logger;
 
 import static io.fabric8.workflow.core.Constants.EXIT;
 import static io.fabric8.workflow.core.Constants.FAILED_PHASE;
-import static io.fabric8.workflow.core.Constants.KUBERNETES_HOSTNAME;
 import static io.fabric8.workflow.core.Constants.NEWLINE;
 import static io.fabric8.workflow.core.Constants.RUNNING_PHASE;
 import static io.fabric8.workflow.core.Constants.SPACE;
@@ -132,7 +133,7 @@ public final class KubernetesFacade implements Closeable {
                 .addToLabels("owner", "jenkins")
                 .endMetadata()
                 .withNewSpec()
-                .withNodeSelector(node.getMetadata().getLabels())
+                .withNodeSelector(node != null ? node.getMetadata().getLabels() : new HashMap<String, String>())
                 .withVolumes(volumes)
                 .addNewContainer()
                 .withVolumeMounts(mounts)
@@ -155,15 +156,22 @@ public final class KubernetesFacade implements Closeable {
         return p;
     }
 
-    private Node getNodeOfPod(String pod) {
-        String hostIp = client.pods().withName(pod).get().getStatus().getHostIP();
-        List<Node> nodes = client.nodes().withLabel(KUBERNETES_HOSTNAME, hostIp).list().getItems();
-        if (nodes.isEmpty()) {
-            throw new IllegalStateException("No node found for pod:" + pod);
-        } else if (nodes.size() > 1) {
-            throw new IllegalStateException("Multiple nodes found for pod:" + pod);
+    private Node getNodeOfPod(String podName) {
+        if (Utils.isNullOrEmpty(podName)) {
+            LOGGER.warning("Failed to find the current pod name.");
+            return null;
+        }
+        Pod pod = client.pods().withName(podName).get();
+        if (pod == null) {
+            LOGGER.warning("Failed to find pod with name:" + podName + " in namespace:" + client.getNamespace() + ".");
+        }
+        String nodeName = pod.getSpec().getNodeName();
+        Node node = client.nodes().withName(nodeName).get();
+        if (node == null) {
+            LOGGER.warning("Failed to find pod with name:" + podName + ".");
+            return null;
         } else {
-            return nodes.iterator().next();
+            return node;
         }
     }
 
