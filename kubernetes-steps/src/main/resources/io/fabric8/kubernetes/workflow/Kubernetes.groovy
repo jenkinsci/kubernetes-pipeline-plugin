@@ -38,7 +38,7 @@ class Kubernetes implements Serializable {
         }
     }
 
-    public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", Boolean privileged = false, Map<String, String> secrets = new HashMap(), Map<String, String> hostPaths = new HashMap(), Map<String, String> emptyDirs = new HashMap(), Map<String, String> env = new ArrayList<KeyValue>()) {
+    public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", Boolean privileged = false, Map<String, String> secrets = new HashMap(), Map<String, String> hostPaths = new HashMap(), Map<String, String> emptyDirs = new HashMap(), Map<String, String> env = new HashMap<>()) {
         return new Pod(this, name, image, serviceAccount, privileged, secrets, hostPaths, emptyDirs, env)
     }
 
@@ -59,9 +59,9 @@ class Kubernetes implements Serializable {
         private final Map secrets
         private final Map hostPathMounts
         private final Map emptyDirs
-        private final List env
+        private final Map env
 
-        Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, List<KeyValue> env) {
+        Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> env) {
             this.kubernetes = kubernetes
             this.name = name
             this.image = image
@@ -112,14 +112,14 @@ class Kubernetes implements Serializable {
         }
 
         public Pod withEnvVar(String key, String value) {
-            List<KeyValue> newEnv = new ArrayList<>(env)
-            newEnv.add(new KeyValue(key, value))
+            Map<String, String> newEnv = new HashMap<>(secrets)
+            newEnv.put(key, value)
             return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newEnv)
         }
 
         public <V> V inside(Closure<V> body) {
             kubernetes.node {
-                kubernetes.script.withPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, emptyDirs: emptyDirs, env: env.toArray(new KeyValue[env.size()])) {
+                kubernetes.script.withPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, emptyDirs: emptyDirs, env: env) {
                     body()
                 }
             }
@@ -201,9 +201,9 @@ class Kubernetes implements Serializable {
         private final String username
         private final String password
         private final String email
-        private final Set<Item> ignorePatterns
+        private final Set<String> ignorePatterns
 
-        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout, String username, String password, String email, Set<Item> ignorePatterns) {
+        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout, String username, String password, String email, Set<String> ignorePatterns) {
             this.kubernetes = kubernetes
             this.name = name
             this.rm = rm
@@ -239,14 +239,14 @@ class Kubernetes implements Serializable {
         }
 
         BuildImage ignoringPattern(String pattern) {
-            Set<Item> newIgnorePatterns = new HashSet<>(ignorePatterns)
-            newIgnorePatterns.add(new Item(pattern))
+            Set<String> newIgnorePatterns = new HashSet<>(ignorePatterns)
+            newIgnorePatterns.add(pattern)
             return new BuildImage(kubernetes, name, rm, timeout, username, password, email, newIgnorePatterns)
         }
 
         Pod fromPath(String path) {
             kubernetes.node {
-                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email, ignorePatterns: ignorePatterns.toArray(new KeyValue[ignorePatterns.size()]))
+                kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email, ignorePatterns: ignorePatterns)
             }
             return new NamedImage(kubernetes, name).toPod()
         }
