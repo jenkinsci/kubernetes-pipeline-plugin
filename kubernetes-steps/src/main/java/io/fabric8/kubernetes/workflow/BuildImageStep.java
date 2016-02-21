@@ -32,7 +32,7 @@ public class BuildImageStep extends AbstractDockerStep implements Serializable {
     private Boolean rm;
     private String path;
     private long timeout = 600000L;
-    private Item[] ignorePatterns;
+    private Set ignorePatterns;
 
     @DataBoundConstructor
     public BuildImageStep(String name) {
@@ -66,12 +66,12 @@ public class BuildImageStep extends AbstractDockerStep implements Serializable {
         this.timeout = timeout;
     }
 
-    public Item[] getIgnorePatterns() {
+    public Set getIgnorePatterns() {
         return ignorePatterns;
     }
 
     @DataBoundSetter
-    public void setIgnorePatterns(Item[] ignorePatterns) {
+    public void setIgnorePatterns(Set ignorePatterns) {
         this.ignorePatterns = ignorePatterns;
     }
 

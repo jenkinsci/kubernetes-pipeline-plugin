@@ -358,10 +358,8 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
             ignorePatterns.addAll(readAllLines(dockerIgnorePath));
         }
 
-        if (step.getIgnorePatterns() != null && step.getIgnorePatterns().length > 0) {
-            for (Item ignorePattern : step.getIgnorePatterns()) {
-                ignorePatterns.add(ignorePattern.getValue());
-            }
+        if (step.getIgnorePatterns() != null && !step.getIgnorePatterns().isEmpty()) {
+            ignorePatterns.addAll(step.getIgnorePatterns());
         }
 
         if (ignorePatterns.isEmpty()) {
