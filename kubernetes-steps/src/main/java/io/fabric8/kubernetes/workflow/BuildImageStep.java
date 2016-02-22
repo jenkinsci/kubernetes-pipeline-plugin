@@ -17,13 +17,15 @@
 package io.fabric8.kubernetes.workflow;
 
 import hudson.Extension;
+import hudson.model.Descriptor;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.Serializable;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BuildImageStep extends AbstractDockerStep implements Serializable {
 
@@ -32,7 +34,7 @@ public class BuildImageStep extends AbstractDockerStep implements Serializable {
     private Boolean rm;
     private String path;
     private long timeout = 600000L;
-    private Set ignorePatterns;
+    private ArrayList<String> ignorePatterns = new ArrayList<>();
 
     @DataBoundConstructor
     public BuildImageStep(String name) {
@@ -66,12 +68,12 @@ public class BuildImageStep extends AbstractDockerStep implements Serializable {
         this.timeout = timeout;
     }
 
-    public Set getIgnorePatterns() {
+    public ArrayList<String>  getIgnorePatterns() {
         return ignorePatterns;
     }
 
     @DataBoundSetter
-    public void setIgnorePatterns(Set ignorePatterns) {
+    public void setIgnorePatterns(ArrayList<String>  ignorePatterns) {
         this.ignorePatterns = ignorePatterns;
     }
 
