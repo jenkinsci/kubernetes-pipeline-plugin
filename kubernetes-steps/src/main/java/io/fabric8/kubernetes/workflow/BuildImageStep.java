@@ -34,7 +34,7 @@ public class BuildImageStep extends AbstractDockerStep implements Serializable {
     private Boolean rm;
     private String path;
     private long timeout = 600000L;
-    private ArrayList<String> ignorePatterns = new ArrayList<>();
+    private ArrayList ignorePatterns = new ArrayList();
 
     @DataBoundConstructor
     public BuildImageStep(String name) {
@@ -73,7 +73,7 @@ public class BuildImageStep extends AbstractDockerStep implements Serializable {
     }
 
     @DataBoundSetter
-    public void setIgnorePatterns(ArrayList<String>  ignorePatterns) {
+    public void setIgnorePatterns(ArrayList  ignorePatterns) {
         this.ignorePatterns = ignorePatterns;
     }
 
