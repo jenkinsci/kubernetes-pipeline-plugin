@@ -59,7 +59,7 @@ class Kubernetes implements Serializable {
         private final Map secrets
         private final Map hostPathMounts
         private final Map emptyDirs
-        private final List env
+        private final Map env
 
         Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> env) {
             this.kubernetes = kubernetes
