@@ -18,7 +18,6 @@ package io.fabric8.kubernetes.workflow;
 
 import groovy.lang.Binding;
 import hudson.Extension;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.workflow.core.ClassWhiteList;
 import org.codehaus.groovy.runtime.ScriptBytecodeAdapter;
 import org.jenkinsci.plugins.workflow.cps.CpsScript;
@@ -26,6 +25,8 @@ import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,7 +63,8 @@ public class KubernetesDSL extends GlobalVariable {
     public static class PlugiWhiteList extends ClassWhiteList {
         public PlugiWhiteList() throws IOException {
             super(ScriptBytecodeAdapter.class,
-                    HashMap.class, HashSet.class, Collections.class, Callable.class);
+                    ArrayList.class, Collection.class, HashMap.class, HashSet.class, Collections.class,
+                    Callable.class);
         }
     }
 }
