@@ -93,6 +93,7 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                                 }
                             })
                             .withTag(step.getTag())
+                            .force()
                             .toRegistry();
 
                     Object result = queue.poll(step.getTimeout(), TimeUnit.MILLISECONDS);
