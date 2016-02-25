@@ -83,6 +83,9 @@ public class ClassWhiteList extends EnumeratingWhitelist {
             }
             processed.add(clazz);
             processClass(clazz.getSuperclass());
+            for (Class iface :clazz.getInterfaces()) {
+                processClass(iface);
+            }
         }
     }
 

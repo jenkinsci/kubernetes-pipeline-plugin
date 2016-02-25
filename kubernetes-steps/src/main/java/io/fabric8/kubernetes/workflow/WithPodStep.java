@@ -67,19 +67,19 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
         return privileged;
     }
 
-    public Map<String, String> getSecrets() {
+    public Map getSecrets() {
         return secrets;
     }
 
-    public Map<String, String> getHostPathMounts() {
+    public Map getHostPathMounts() {
         return hostPathMounts;
     }
 
-    public  Map<String, String> getEmptyDirs() {
+    public Map getEmptyDirs() {
         return emptyDirs;
     }
 
-    public Map<String, String> getEnv() {
+    public Map getEnv() {
         return env;
     }
 
@@ -101,7 +101,7 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
 
         @Override
         public String getDisplayName() {
-            return "Run build steps as a Kubernetes Pod";
+            return "Run build steps in a Pod";
         }
 
         @Override

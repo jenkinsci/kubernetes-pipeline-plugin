@@ -38,7 +38,7 @@ class Kubernetes implements Serializable {
         }
     }
 
-    public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", Boolean privileged = false, Map<String, String> secrets = new HashMap(), Map<String, String> hostPaths = new HashMap(), Map<String, String> emptyDirs = new HashMap(), Map<String, String> env = new HashMap<>()) {
+    public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", Boolean privileged = false, Map<String, String> secrets = new HashMap(), Map<String, String> hostPaths = new HashMap(), Map<String, String> emptyDirs = new HashMap<>(), Map<String, String> env = new HashMap<>()) {
         return new Pod(this, name, image, serviceAccount, privileged, secrets, hostPaths, emptyDirs, env)
     }
 
@@ -106,13 +106,13 @@ class Kubernetes implements Serializable {
         }
 
         public Pod withEmptyDir(String mountPath, String medium) {
-            Set<String> newEmptyDirs = new HashSet<>(emptyDirs)
+            Map<String, String> newEmptyDirs = new HashMap<>(emptyDirs)
             newEmptyDirs.put(emptyDir, medium)
             return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, env)
         }
 
         public Pod withEnvVar(String key, String value) {
-            Map<String, String> newEnv = new HashMap<>(secrets)
+            Map<String, String> newEnv = new HashMap<>(env)
             newEnv.put(key, value)
             return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newEnv)
         }
@@ -181,7 +181,7 @@ class Kubernetes implements Serializable {
 
 
         BuildImage build() {
-            return new BuildImage(kubernetes, name, false, 600000L, null, null, null, new HashSet<String>())
+            return new BuildImage(kubernetes, name, false, 600000L, null, null, null, new ArrayList<String>())
         }
 
         PushImage push() {
@@ -201,9 +201,9 @@ class Kubernetes implements Serializable {
         private final String username
         private final String password
         private final String email
-        private final Set<String> ignorePatterns
+        private final List<String> ignorePatterns
 
-        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout, String username, String password, String email, Set<String> ignorePatterns) {
+        BuildImage(Kubernetes kubernetes, String name, Boolean rm, long timeout, String username, String password, String email, List<String> ignorePatterns) {
             this.kubernetes = kubernetes
             this.name = name
             this.rm = rm
@@ -211,7 +211,7 @@ class Kubernetes implements Serializable {
             this.username = username
             this.password = password
             this.email = email
-            this.ignorePatterns = ignorePatterns != null ? ignorePatterns : new HashSet<String>()
+            this.ignorePatterns = ignorePatterns != null ? ignorePatterns : new ArrayList<String>()
         }
 
         BuildImage removingIntermediate() {
@@ -239,7 +239,7 @@ class Kubernetes implements Serializable {
         }
 
         BuildImage ignoringPattern(String pattern) {
-            Set<String> newIgnorePatterns = new HashSet<>(ignorePatterns)
+            List<String> newIgnorePatterns = new ArrayList<>(ignorePatterns)
             newIgnorePatterns.add(pattern)
             return new BuildImage(kubernetes, name, rm, timeout, username, password, email, newIgnorePatterns)
         }
