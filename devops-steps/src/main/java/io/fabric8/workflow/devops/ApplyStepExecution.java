@@ -59,8 +59,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.fabric8.workflow.core.Constants.*;
-
 public class ApplyStepExecution extends AbstractSynchronousStepExecution<String> {
 
     @Inject
@@ -82,6 +80,10 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
         String json = step.getFile();
         String environment = step.getEnvironment();
+        String environmentName = step.getEnvironmentName();
+        if (StringUtils.isBlank(environmentName)) {
+            environmentName = createDefaultEnvironmentName(environment);    
+        }
 
         if (StringUtils.isBlank(json) || StringUtils.isBlank(environment)) {
             throw new AbortException("Supply file and target environment");
@@ -146,7 +148,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     Pod pod = (Pod) entity;
                     controller.applyPod(pod, fileName);
 
-                    String event = getDeploymentEventJson(entity.getKind(), environment);
+                    String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.sendEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
                 } else if (entity instanceof Service) {
@@ -156,7 +158,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     ReplicationController replicationController = (ReplicationController) entity;
                     controller.applyReplicationController(replicationController, fileName);
 
-                    String event = getDeploymentEventJson(entity.getKind(), environment);
+                    String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.sendEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
                 } else if (entity != null) {
@@ -167,6 +169,18 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             throw new AbortException("Error during kubernetes apply: " + e.getMessage());
         }
         return "OK";
+    }
+
+    private String createDefaultEnvironmentName(String environment) {
+        if (StringUtils.isBlank(environment)) {
+            return environment;
+        }
+        String[] split = environment.split("-");
+        String answer = environment;
+        if (split != null && split.length > 0) {
+            answer = split[split.length - 1];
+        }
+        return StringUtils.capitalize(answer);
     }
 
     private String getRegistry() {
@@ -508,15 +522,16 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         }
     }
 
-    public String getDeploymentEventJson(String resource, String environment) throws IOException, InterruptedException {
+    public String getDeploymentEventJson(String resource, String environment, String environmentName) throws IOException, InterruptedException {
         DeploymentEvent event = new DeploymentEvent();
 
         GitConfig config = getGitConfig();
 
         event.setAuthor(config.getAuthor());
         event.setCommit(config.getCommit());
-        event.setEnvironment(environment);
-        event.setApplication(env.get("JOB_NAME"));
+        event.setNamespace(environment);
+        event.setEnvironment(environmentName);
+        event.setApp(env.get("JOB_NAME"));
         event.setResource(resource);
         event.setVersion(env.get("VERSION"));
 

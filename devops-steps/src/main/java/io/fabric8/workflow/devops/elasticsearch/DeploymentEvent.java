@@ -20,10 +20,10 @@ import java.io.Serializable;
 import java.util.Date;
 
 public class DeploymentEvent implements Serializable {
-
     private String author;
-    private String application;
+    private String app;
     private String commit;
+    private String namespace;
     private String environment;
     private String resource;
     private String version;
@@ -37,12 +37,12 @@ public class DeploymentEvent implements Serializable {
         this.author = author;
     }
 
-    public String getApplication() {
-        return application;
+    public String getApp() {
+        return app;
     }
 
-    public void setApplication(String application) {
-        this.application = application;
+    public void setApp(String app) {
+        this.app = app;
     }
 
     public String getCommit() {
@@ -83,5 +83,13 @@ public class DeploymentEvent implements Serializable {
 
     public void setPost_date(Date post_date) {
         this.post_date = post_date;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }
