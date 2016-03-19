@@ -398,70 +398,74 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
     protected String tryDefaultAnnotationEnvVar(String envVarName) throws AbortException {
 
         ProjectConfig projectConfig = getProjectConfig();
-        GitConfig gitConfig = getGitConfig();
-        String repoName = projectConfig.getBuildName();
-        String userEnvVar = "JENKINS_GOGS_USER";
-        String username = env.get(userEnvVar);
+        if (projectConfig != null){
+            GitConfig gitConfig = getGitConfig();
+            String repoName = projectConfig.getBuildName();
+            String userEnvVar = "JENKINS_GOGS_USER";
+            String username = env.get(userEnvVar);
 
-        if (io.fabric8.utils.Objects.equal("BUILD_URL", envVarName)) {
-            String jobUrl = projectConfig.getLink("Job");
-            if (Strings.isNullOrBlank(jobUrl)) {
-                String name = projectConfig.getBuildName();
-                if (Strings.isNullOrBlank(name)) {
-                    // lets try deduce the jenkins build name we'll generate
-                    if (Strings.isNotBlank(repoName)) {
-                        name = repoName;
-                        if (Strings.isNotBlank(username)) {
-                            name = ProjectRepositories.createBuildName(username, repoName);
-                        } else {
-                            listener.getLogger().println("Cannot auto-default BUILD_URL as there is no environment variable `" + userEnvVar + "` defined so we can't guess the Jenkins build URL");
+            if (io.fabric8.utils.Objects.equal("BUILD_URL", envVarName)) {
+                String jobUrl = projectConfig.getLink("Job");
+                if (Strings.isNullOrBlank(jobUrl)) {
+                    String name = projectConfig.getBuildName();
+                    if (Strings.isNullOrBlank(name)) {
+                        // lets try deduce the jenkins build name we'll generate
+                        if (Strings.isNotBlank(repoName)) {
+                            name = repoName;
+                            if (Strings.isNotBlank(username)) {
+                                name = ProjectRepositories.createBuildName(username, repoName);
+                            } else {
+                                listener.getLogger().println("Cannot auto-default BUILD_URL as there is no environment variable `" + userEnvVar + "` defined so we can't guess the Jenkins build URL");
+                            }
                         }
                     }
-                }
-                if (Strings.isNotBlank(name)) {
-                    String jenkinsUrl = KubernetesHelper.getServiceURLInCurrentNamespace(getKubernetes(), ServiceNames.JENKINS, "http", null, true);
-                    jobUrl = URLUtils.pathJoin(jenkinsUrl, "/job", name);
+                    if (Strings.isNotBlank(name)) {
+                        String jenkinsUrl = KubernetesHelper.getServiceURLInCurrentNamespace(getKubernetes(), ServiceNames.JENKINS, "http", null, true);
+                        jobUrl = URLUtils.pathJoin(jenkinsUrl, "/job", name);
 
+                    }
                 }
-            }
-            if (Strings.isNotBlank(jobUrl)) {
-                String buildId = env.get("BUILD_ID");
-                if (Strings.isNotBlank(buildId)) {
-                    jobUrl = URLUtils.pathJoin(jobUrl, buildId);
+                if (Strings.isNotBlank(jobUrl)) {
+                    String buildId = env.get("BUILD_ID");
+                    if (Strings.isNotBlank(buildId)) {
+                        jobUrl = URLUtils.pathJoin(jobUrl, buildId);
+                    } else {
+                        listener.getLogger().println("Cannot find BUILD_ID to create a specific jenkins build URL. So using: " + jobUrl);
+                    }
+                }
+                return jobUrl;
+            } else if (io.fabric8.utils.Objects.equal("GIT_URL", envVarName)) {
+                String gitUrl = projectConfig.getLinks().get("Git");
+                if (Strings.isNullOrBlank(gitUrl)) {
+                    listener.getLogger().println("No Job link found in fabric8.yml so we cannot set the GIT_URL");
                 } else {
-                    listener.getLogger().println("Cannot find BUILD_ID to create a specific jenkins build URL. So using: " + jobUrl);
+                    if (gitUrl.endsWith(".git")) {
+                        gitUrl = gitUrl.substring(0, gitUrl.length() - 4);
+                    }
+                    String gitCommitId = gitConfig.getCommit();
+                    if (Strings.isNotBlank(gitCommitId)) {
+                        gitUrl = URLUtils.pathJoin(gitUrl, "commit", gitCommitId);
+                    }
+                    return gitUrl;
                 }
-            }
-            return jobUrl;
-        } else if (io.fabric8.utils.Objects.equal("GIT_URL", envVarName)) {
-            String gitUrl = projectConfig.getLinks().get("Git");
-            if (Strings.isNullOrBlank(gitUrl)) {
-                listener.getLogger().println("No Job link found in fabric8.yml so we cannot set the GIT_URL");
-            } else {
-                if (gitUrl.endsWith(".git")) {
-                    gitUrl = gitUrl.substring(0, gitUrl.length() - 4);
+
+            } else if (io.fabric8.utils.Objects.equal("GIT_COMMIT", envVarName)) {
+                String gitCommit = gitConfig.getCommit();
+                if (Strings.isNullOrBlank(gitCommit)) {
+                    listener.getLogger().println("No git commit found in git.yml so we cannot set the GIT_COMMIT");
                 }
-                String gitCommitId = gitConfig.getCommit();
-                if (Strings.isNotBlank(gitCommitId)) {
-                    gitUrl = URLUtils.pathJoin(gitUrl, "commit", gitCommitId);
+                return gitCommit;
+
+            } else if (io.fabric8.utils.Objects.equal("GIT_BRANCH", envVarName)) {
+                String gitBranch = gitConfig.getBranch();
+                if (Strings.isNullOrBlank(gitBranch)) {
+                    listener.getLogger().println("No git branch found in git.yml so we cannot set the GIT_BRANCH");
                 }
-                return gitUrl;
-            }
+                return gitBranch;
 
-        } else if (io.fabric8.utils.Objects.equal("GIT_COMMIT", envVarName)) {
-            String gitCommit = gitConfig.getCommit();
-            if (Strings.isNullOrBlank(gitCommit)) {
-                listener.getLogger().println("No git commit found in git.yml so we cannot set the GIT_COMMIT");
             }
-            return gitCommit;
-
-        } else if (io.fabric8.utils.Objects.equal("GIT_BRANCH", envVarName)) {
-            String gitBranch = gitConfig.getBranch();
-            if (Strings.isNullOrBlank(gitBranch)) {
-                listener.getLogger().println("No git branch found in git.yml so we cannot set the GIT_BRANCH");
-            }
-            return gitBranch;
-
+        } else {
+            listener.getLogger().println("No fabric8.yml so unable to add environment pod annotations");
         }
         return null;
     }
@@ -505,7 +509,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         try {
             return ProjectConfigs.parseProjectConfig(readFile("fabric8.yml"));
         } catch (Exception e) {
-            throw new AbortException("Unable to parse fabric8.yml." + e);
+            // its fine if no fabric8.yml file is found
+            return null;
         }
     }
 
