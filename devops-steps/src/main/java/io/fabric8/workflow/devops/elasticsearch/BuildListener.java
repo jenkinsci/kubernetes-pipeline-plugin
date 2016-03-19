@@ -1,9 +1,9 @@
 package io.fabric8.workflow.devops.elasticsearch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.model.Cause;
 import hudson.model.Job;
 import hudson.model.Result;
 import hudson.model.Run;
@@ -11,6 +11,9 @@ import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 
 import java.io.IOException;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,25 +23,23 @@ import java.util.logging.Logger;
 @Extension
 public class BuildListener extends RunListener<Run> {
     private static final Logger LOG = Logger.getLogger(BuildListener.class.getName());
+    private ObjectMapper mapper = JsonUtils.createObjectMapper();
 
     public BuildListener() {
     }
 
     @Override
     public synchronized void onCompleted(Run run, TaskListener listener) {
-        final Build build = createBuild(run, listener);
+        final BuildDTO build = createBuild(run, listener);
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             String json = mapper.writeValueAsString(build);
-
             ElasticsearchClient.sendEvent(json, "build", listener);
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Error when sending build data: " + build, e);
         }
     }
 
-    private Build createBuild(Run run, TaskListener listener) {
+    private BuildDTO createBuild(Run run, TaskListener listener) {
         final Job job = run.getParent();
 
         EnvVars environment = null;
@@ -50,18 +51,28 @@ public class BuildListener extends RunListener<Run> {
             LOG.log(Level.WARNING, "Error getting environment", e);
         }
 
-        final Build build = new Build();
+        final BuildDTO build = new BuildDTO();
         build.setDuration(run.getDuration());
-        build.setJobName(job.getFullName());
+        build.setApp(job.getFullName());
         Result result = run.getResult();
         if (result != null) {
-            build.setResult(result.toString());
+            build.setBuildResult(result.toString());
         }
-        build.setStartTime(run.getStartTimeInMillis());
-        build.setNumber(run.getNumber());
+        build.setStartTime(new Date(run.getStartTimeInMillis()));
+        build.setBuildNumber(run.getNumber());
         build.setEnvironment(environment);
-        build.setTimestamp(run.getTimestamp());
-
+        Calendar timestamp = run.getTimestamp();
+        if (timestamp != null) {
+            build.setTimestamp(timestamp.getTime());
+        }
+        build.setBuildUrl(run.getUrl());
+        List<Cause> causes = run.getCauses();
+        for (Cause cause : causes) {
+            CauseDTO causeDTO = new CauseDTO(cause);
+            if (causeDTO != null) {
+                build.addCause(causeDTO);
+            }
+        }
         return build;
     }
 }

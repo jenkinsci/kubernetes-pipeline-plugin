@@ -18,7 +18,6 @@ package io.fabric8.workflow.devops;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -39,8 +38,9 @@ import io.fabric8.utils.Strings;
 import io.fabric8.utils.Systems;
 import io.fabric8.utils.URLUtils;
 import io.fabric8.workflow.core.Constants;
-import io.fabric8.workflow.devops.elasticsearch.DeploymentEvent;
+import io.fabric8.workflow.devops.elasticsearch.DeploymentEventDTO;
 import io.fabric8.workflow.devops.elasticsearch.ElasticsearchClient;
+import io.fabric8.workflow.devops.elasticsearch.JsonUtils;
 import io.fabric8.workflow.devops.git.GitConfig;
 import io.fabric8.workflow.devops.git.GitInfoCallback;
 import org.apache.commons.io.Charsets;
@@ -523,7 +523,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
     }
 
     public String getDeploymentEventJson(String resource, String environment, String environmentName) throws IOException, InterruptedException {
-        DeploymentEvent event = new DeploymentEvent();
+        DeploymentEventDTO event = new DeploymentEventDTO();
 
         GitConfig config = getGitConfig();
 
@@ -535,8 +535,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         event.setResource(resource);
         event.setVersion(env.get("VERSION"));
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        ObjectMapper mapper = JsonUtils.createObjectMapper();
         return mapper.writeValueAsString(event);
     }
 

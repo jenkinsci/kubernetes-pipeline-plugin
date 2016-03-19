@@ -19,7 +19,7 @@ package io.fabric8.workflow.devops.elasticsearch;
 import java.io.Serializable;
 import java.util.Date;
 
-public class DeploymentEvent implements Serializable {
+public class DeploymentEventDTO extends DTOSupport implements Serializable  {
     private String author;
     private String app;
     private String commit;
@@ -27,7 +27,7 @@ public class DeploymentEvent implements Serializable {
     private String environment;
     private String resource;
     private String version;
-    private Date post_date = new Date();
+    private Date timestamp = new Date();
 
     public String getAuthor() {
         return author;
@@ -77,12 +77,12 @@ public class DeploymentEvent implements Serializable {
         this.version = version;
     }
 
-    public Date getPost_date() {
-        return post_date;
+    public Date getTimestamp() {
+        return timestamp;
     }
 
-    public void setPost_date(Date post_date) {
-        this.post_date = post_date;
+    public void setTimestamp(Date timestamp) {
+        this.timestamp = timestamp;
     }
 
     public String getNamespace() {
