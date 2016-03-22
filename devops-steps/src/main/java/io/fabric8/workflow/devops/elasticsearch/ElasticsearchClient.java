@@ -17,7 +17,9 @@
 package io.fabric8.workflow.devops.elasticsearch;
 
 import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.path.json.JsonPath;
 import com.jayway.restassured.response.Response;
+import com.jayway.restassured.response.ResponseBody;
 import hudson.model.TaskListener;
 import io.fabric8.utils.Systems;
 
@@ -62,8 +64,17 @@ public class ElasticsearchClient {
                             when().
                             post("");
 
-            return r.getBody().jsonPath().get("created");
-
+            ResponseBody body = r.getBody();
+            if (body != null) {
+                JsonPath path = body.jsonPath();
+                if (path != null) {
+                    Boolean created = path.get("created");
+                    if (created != null) {
+                        return created;
+                    }
+                }
+            }
+            return false;
         } catch (Exception e){
             // handle exceptions as we dont want to abort the pipeline
             e.printStackTrace(listener.getLogger());
