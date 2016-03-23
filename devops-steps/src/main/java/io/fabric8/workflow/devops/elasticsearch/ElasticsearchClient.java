@@ -22,9 +22,8 @@ import com.jayway.restassured.response.Response;
 import com.jayway.restassured.response.ResponseBody;
 import hudson.model.TaskListener;
 import io.fabric8.utils.Systems;
-
-import java.io.IOException;
-import java.net.InetAddress;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import static com.jayway.restassured.RestAssured.given;
 
@@ -35,7 +34,6 @@ public class ElasticsearchClient {
 
     public final static String DEPLOYMENT = "deployment";
     private final static String INDEX = "/pipeline/";
-
     /**
      * Attempts to send an event to elasticsearch for the `pipeline` index
      *
@@ -47,15 +45,15 @@ public class ElasticsearchClient {
     public static boolean sendEvent(String json, String type, TaskListener listener){
         String protocol = Systems.getEnvVarOrSystemProperty("PIPELINE_ELASTICSEARCH_PROTOCOL","http");
         String server = Systems.getEnvVarOrSystemProperty("PIPELINE_ELASTICSEARCH_HOST","elasticsearch");
-        try {
-            int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT","20"));
-            InetAddress.getByName(server).isReachable(timeout);
-        } catch (IOException e) {
-            listener.getLogger().println("Unable to connect to Elasticsearch service. Check Elasticsearch is running in the correct namespace." +e.getMessage());
+        String port = Systems.getEnvVarOrSystemProperty("ELASTICSEARCH_SERVICE_PORT", "9200");
+
+        if (!isUrlReachable(protocol + "://" + server + ":" + port)){
+            listener.getLogger().println("Unable to connect to Elasticsearch service. Check Elasticsearch is running in the correct namespace");
             return false;
+        } else {
+            listener.getLogger().println("Found Elasticsearch server");
         }
 
-        String port = Systems.getEnvVarOrSystemProperty("ELASTICSEARCH_SERVICE_PORT", "9200");
         try {
             RestAssured.baseURI  = protocol + "://" + server + ":" + port + INDEX + type;
             Response r = given()
@@ -84,4 +82,21 @@ public class ElasticsearchClient {
         }
     }
 
+    public static boolean isUrlReachable(String url){
+        int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT","1000")); // default to 1 second
+        try {
+            HttpURLConnection.setFollowRedirects(false);
+            HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+            con.setRequestMethod("HEAD");
+
+            con.setConnectTimeout(timeout);
+
+            return (con.getResponseCode() == HttpURLConnection.HTTP_OK);
+        } catch (java.net.SocketTimeoutException e) {
+            return false;
+        } catch (java.io.IOException e) {
+            return false;
+        }
+
+    }
 }
