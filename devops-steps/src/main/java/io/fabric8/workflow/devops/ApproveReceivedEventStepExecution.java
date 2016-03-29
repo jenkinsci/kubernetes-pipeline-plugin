@@ -20,36 +20,45 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.AbortException;
 import hudson.model.TaskListener;
 import io.fabric8.utils.Strings;
+import io.fabric8.workflow.devops.elasticsearch.ApprovalEventDTO;
 import io.fabric8.workflow.devops.elasticsearch.ElasticsearchClient;
+import io.fabric8.workflow.devops.elasticsearch.JsonUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
 import javax.inject.Inject;
+import java.util.Date;
 
 
-public class SendEventStepExecution extends AbstractSynchronousStepExecution<String>{
+public class ApproveReceivedEventStepExecution extends AbstractSynchronousStepExecution<String>{
 
     @Inject
-    private transient SendEventStep step;
+    private transient ApproveReceivedEventStep step;
 
     @StepContextParameter
     private transient TaskListener listener;
 
+    private ObjectMapper mapper = JsonUtils.createObjectMapper();
+
     @Override
     public String run() throws Exception {
 
-        String json = step.getJson();
-        String elasticsearchType = step.getElasticsearchType();
-
-        if (Strings.isNullOrBlank(json)) {
-            throw new AbortException("No JSON payload found");
+        if (step.getApproved() == null) {
+            throw new AbortException("No Approved boolean set");
         }
-        // validate JSON structure
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.readTree(json);
 
-        if (!ElasticsearchClient.sendEvent(json, elasticsearchType, listener)){
-            throw new AbortException("Error sending event to elasticsearch");
+        if (Strings.isNullOrBlank(step.getId())) {
+            throw new AbortException("No elasticsearch id provided");
+        }
+        ApprovalEventDTO approval = new ApprovalEventDTO();
+        approval.setApproved(step.getApproved());
+        approval.setReceivedTime(new Date());
+
+        String json = mapper.writeValueAsString(approval);
+
+        Boolean success = ElasticsearchClient.updateEvent(step.getId(), json, ElasticsearchClient.APPROVE, listener);
+        if (!success){
+            throw new AbortException("Error updating Approve event id ["+step.getId()+"]");
         }
 
         return "OK";

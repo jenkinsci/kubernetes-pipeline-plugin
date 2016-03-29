@@ -26,13 +26,34 @@ __NOTE__ By default [DeploymentEvent](https://github.com/fabric8io/kubernetes-wo
 
 ## Working with Elasticsearch
 
-You can send events to elasticsearch providing it is running in the current namespace with a Kubernetes service name of `elasticsearch`.  The fabric8 logging template does exactly this.
+
+### Create
+You can create events in elasticsearch providing it is running in the current namespace with a Kubernetes service name of `elasticsearch`.  The fabric8 logging template does exactly this.
 
 
     node {
         def event = '{"user" : "rawlingsj","post_date" : "2016-01-30T13:29:36+00:00","project" : "my-cool-project"}'
 
-        sendEvent(json: event, elasticsearchType: 'mytype')
+        createEvent(json: event, index: 'myindex')
     }
 
-__NOTE__ The elasticsearch index used is `pipeline` and if no elasticsearchType is set the `custom` type is used.  For more information see https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html#docs-index_
+__NOTE__ The default elasticsearch index used is `pipeline` if no index property is set.  For more information see https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html#docs-index_
+
+
+### Approve Events
+You can send and update approve events in elasticsearch
+
+
+    node{
+        def id = approveRequestedEvent(app: 'test app', environment: 'staging')
+
+        try {
+          input id: 'Proceed', message: 'Continue?'
+        } catch (err) {
+
+          approveReceivedEvent(id: id, approved: false)
+          throw err
+        }
+        approveReceivedEvent(id: id, approved: true)
+
+    }
