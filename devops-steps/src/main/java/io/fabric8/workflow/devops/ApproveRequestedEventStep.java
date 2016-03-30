@@ -17,36 +17,36 @@
 package io.fabric8.workflow.devops;
 
 import hudson.Extension;
+import io.fabric8.workflow.devops.CreateEventStepExecution;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-public class SendEventStep extends AbstractStepImpl {
+public class ApproveRequestedEventStep extends AbstractStepImpl {
 
-    private final String json;
-
-    private String elasticsearchType = "custom";
+    private final String app;
+    private final String environment;
 
     @DataBoundConstructor
-    public SendEventStep(String json, String elasticsearchType){
-        this.json = json;
-        if (elasticsearchType != null) this.elasticsearchType = elasticsearchType;
+    public ApproveRequestedEventStep(String app, String environment){
+        this.app = app;
+        this.environment = environment;
     }
 
-    public String getJson() {
-        return json;
+    public String getApp() {
+        return app;
     }
 
-    public String getElasticsearchType() {
-        return elasticsearchType;
+    public String getEnvironment() {
+        return environment;
     }
 
     @Extension
     public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
         public DescriptorImpl() {
-            super(SendEventStepExecution.class);
+            super(ApproveRequestedEventStepExecution.class);
         }
 
         public DescriptorImpl(Class<? extends StepExecution> executionType) {
@@ -55,12 +55,12 @@ public class SendEventStep extends AbstractStepImpl {
 
         @Override
         public String getFunctionName() {
-            return "sendEvent";
+            return "approveRequestedEvent";
         }
 
         @Override
         public String getDisplayName() {
-            return "Sends a JSON payload event to Elasticsearch";
+            return "Creates an Approve requested event in Elasticsearch";
         }
     }
 }

@@ -149,7 +149,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     controller.applyPod(pod, fileName);
 
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
-                    ElasticsearchClient.sendEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
+                    ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
                 } else if (entity instanceof Service) {
                     Service service = (Service) entity;
@@ -159,7 +159,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     controller.applyReplicationController(replicationController, fileName);
 
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
-                    ElasticsearchClient.sendEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
+                    ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
                 } else if (entity != null) {
                     controller.apply(entity, fileName);

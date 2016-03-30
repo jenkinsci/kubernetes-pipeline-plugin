@@ -33,7 +33,7 @@ public class BuildListener extends RunListener<Run> {
         final BuildDTO build = createBuild(run, listener);
         try {
             String json = mapper.writeValueAsString(build);
-            ElasticsearchClient.sendEvent(json, "build", listener);
+            ElasticsearchClient.createEvent(json, "build", listener);
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Error when sending build data: " + build, e);
         }
