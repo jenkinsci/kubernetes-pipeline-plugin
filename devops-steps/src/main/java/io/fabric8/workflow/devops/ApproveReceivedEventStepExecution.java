@@ -40,6 +40,8 @@ public class ApproveReceivedEventStepExecution extends AbstractSynchronousStepEx
 
     private ObjectMapper mapper = JsonUtils.createObjectMapper();
 
+    private final String OK = "OK";
+
     @Override
     public String run() throws Exception {
 
@@ -48,7 +50,9 @@ public class ApproveReceivedEventStepExecution extends AbstractSynchronousStepEx
         }
 
         if (Strings.isNullOrBlank(step.getId())) {
-            throw new AbortException("No elasticsearch id provided");
+            // if we dont have an id to update ignore the request as it's likely elasticsearch isn't running
+            listener.getLogger().println("No approve event id found.  Skipping approval event update request");
+            return OK;
         }
         ApprovalEventDTO approval = new ApprovalEventDTO();
         approval.setApproved(step.getApproved());
@@ -61,7 +65,7 @@ public class ApproveReceivedEventStepExecution extends AbstractSynchronousStepEx
             throw new AbortException("Error updating Approve event id ["+step.getId()+"]");
         }
 
-        return "OK";
+        return OK;
 
     }
 
