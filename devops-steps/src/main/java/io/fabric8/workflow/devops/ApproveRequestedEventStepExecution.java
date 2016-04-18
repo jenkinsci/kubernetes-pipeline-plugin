@@ -57,12 +57,7 @@ public class ApproveRequestedEventStepExecution extends AbstractSynchronousStepE
 
         String json = mapper.writeValueAsString(approval);
 
-        String id = ElasticsearchClient.createEvent(json, ElasticsearchClient.APPROVE, listener);
-        if (Strings.isNullOrBlank(id)){
-            throw new AbortException("Error creating Approve event in elasticsearch");
-        }
-
-        return id;
+        return ElasticsearchClient.createEvent(json, ElasticsearchClient.APPROVE, listener);
 
     }
 }
