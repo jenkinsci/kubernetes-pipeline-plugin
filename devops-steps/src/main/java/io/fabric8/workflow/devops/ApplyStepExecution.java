@@ -102,13 +102,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             controller.setRollingUpgrade(step.getRollingUpgrades());
             controller.setRollingUpgradePreserveScale(step.getRollingUpgradePreserveScale());
 
-            boolean openShift = KubernetesHelper.isOpenShift(kubernetes);
-            if (!openShift) {
-                listener.error("Disabling openshift features has not been implemeted yet");
-                // TODO: handle
-                //disableOpenShiftFeatures(controller);
-            }
-
             Object dto = KubernetesHelper.loadJson(json);
 
             if (dto == null) {
@@ -131,7 +124,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
             entities.addAll(KubernetesHelper.toItemList(dto));
 
-            if (openShift) {
+            if (KubernetesHelper.isOpenShift(kubernetes)) {
                 createRoutes(kubernetes, entities, environment);
             }
 
