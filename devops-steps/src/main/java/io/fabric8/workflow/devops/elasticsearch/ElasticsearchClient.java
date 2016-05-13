@@ -97,10 +97,10 @@ public class ElasticsearchClient {
         json = "{\"doc\": "+ json + "}";
 
         if (!isUrlReachable(protocol + "://" + server + ":" + port)){
-            listener.getLogger().println("Unable to connect to Elasticsearch service. Check Elasticsearch is running in the correct namespace");
+            listener.getLogger().println("Pipeline event not sent as no elasticsearch service found");
             return false;
         } else {
-            listener.getLogger().println("Found Elasticsearch server, sending:"+json);
+            listener.getLogger().println("Found Elasticsearch server, sending event:"+json);
         }
 
         try {
