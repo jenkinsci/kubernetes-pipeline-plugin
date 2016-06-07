@@ -39,12 +39,12 @@
 
         <dependency>
             <groupId>io.fabric8.pipeline</groupId>
-            <artifactId>kubernetes-steps</artifactId>
+            <artifactId>kubernetes-pipeline-steps</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.fabric8.pipeline</groupId>
-            <artifactId>devops-steps</artifactId>
+            <artifactId>kubernetes-pipeline-devops-steps</artifactId>
         </dependency>
 
         <dependency>
