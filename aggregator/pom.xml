@@ -19,32 +19,32 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>kubernetes-workflow-project</artifactId>
+        <artifactId>kubernetes-pipeline-project</artifactId>
         <groupId>io.fabric8</groupId>
         <version>1.3-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.fabric8.workflow</groupId>
-    <artifactId>fabric8-workflow-aggregator</artifactId>
-    <name>Fabric8 :: Workflow :: Aggregator</name>
+    <groupId>io.fabric8.pipeline</groupId>
+    <artifactId>kubernetes-pipeline-aggregator</artifactId>
+    <name>Kubernetes :: Pipeline :: Aggregator</name>
     <packaging>hpi</packaging>
 
     <dependencies>
         <!-- Internal Deps -->
         <dependency>
-            <groupId>io.fabric8.workflow</groupId>
-            <artifactId>fabric8-workflow-core</artifactId>
+            <groupId>io.fabric8.pipeline</groupId>
+            <artifactId>kubernetes-pipeline-core</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>io.fabric8.workflow</groupId>
-            <artifactId>kubernetes-steps</artifactId>
+            <groupId>io.fabric8.pipeline</groupId>
+            <artifactId>kubernetes-pipeline-steps</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>io.fabric8.workflow</groupId>
-            <artifactId>devops-steps</artifactId>
+            <groupId>io.fabric8.pipeline</groupId>
+            <artifactId>kubernetes-pipeline-devops-steps</artifactId>
         </dependency>
 
         <dependency>

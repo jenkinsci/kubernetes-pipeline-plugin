@@ -6,14 +6,14 @@ Kubernetes Steps
 ### Using a maven kubernetes pod
 
     kubernetes.pod('buildpod').withImage('maven').inside {      
-        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }    
     
 ### Using environment variables
 
     kubernetes.pod('buildpod').withImage('maven').withEnvVar('DOCKER_CONFIG','/home/jenkins/.docker/').inside {      
-        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }    
      
@@ -28,21 +28,21 @@ Currently the following volume types are supported:
 #### Using secrets
 
     kubernetes.pod('buildpod').withImage('maven').withSecret('gpg-key','/home/jenkins/.gnupg').inside {      
-        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }    
 
 #### Using host path mounts
     
     kubernetes.pod('buildpod').withImage('maven').withHostPathMount('/path/on/host', '/path/on/container').inside {      
-        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }  
       
 #### Using empty Dir mounts
     
     kubernetes.pod('buildpod').withImage('maven').withEmptyDir('/path/on/container').inside {      
-        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }     
          
@@ -50,14 +50,14 @@ This also supports specifying the medium (e.g. "Memory")
 
          
     kubernetes.pod('buildpod').withImage('maven').withEmptyDir('/path/on/container', 'Memory').inside {      
-        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }                
     
 ### Using privileged containers
 
     kubernetes.pod('buildpod').withImage('maven').withPrivileged(true).inside {      
-        git 'https://github.com/fabric8io/kubernetes-workflow.git'
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }   
     

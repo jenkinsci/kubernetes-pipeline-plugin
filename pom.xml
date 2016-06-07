@@ -26,11 +26,11 @@
     </parent>
 
     <groupId>io.fabric8</groupId>
-    <artifactId>kubernetes-workflow-project</artifactId>
+    <artifactId>kubernetes-pipeline-project</artifactId>
     <version>1.3-SNAPSHOT</version>
 
-    <name>Fabric8 :: Workflow :: Project</name>
-    <description>Use Docker Images and Kubernetes Pods from workflows.</description>
+    <name>Kubernetes :: Pipeline :: Project</name>
+    <description>Use Docker Images and Kubernetes Pods from pipeline.</description>
     <packaging>pom</packaging>
 
     <properties>
@@ -57,20 +57,20 @@
         <dependencies>
             <!-- Own Modules -->
             <dependency>
-                <groupId>io.fabric8.workflow</groupId>
-                <artifactId>fabric8-workflow-core</artifactId>
+                <groupId>io.fabric8.pipeline</groupId>
+                <artifactId>kubernetes-pipeline-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.fabric8.workflow</groupId>
-                <artifactId>kubernetes-steps</artifactId>
+                <groupId>io.fabric8.pipeline</groupId>
+                <artifactId>kubernetes-pipeline-steps</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.fabric8.workflow</groupId>
-                <artifactId>devops-steps</artifactId>
+                <groupId>io.fabric8.pipeline</groupId>
+                <artifactId>kubernetes-pipeline-devops-steps</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

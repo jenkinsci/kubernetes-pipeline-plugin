@@ -21,7 +21,7 @@ The KubernetesApply step will enrich Pod or Replication Controller manifests, ad
         kubernetesApply(file: rc, environment: 'my-cool-app-staging', registry: 'myexternalregistry.io:5000')
     }
 
-__NOTE__ By default [DeploymentEvent](https://github.com/fabric8io/kubernetes-workflow/blob/master/src/main/java/io/fabric8/kubernetes/workflow/elasticsearch/DeploymentEvent.java) are sent to elasticsearch (if running in the same namespace) when a pod or replication controller is deployed.
+__NOTE__ By default [DeploymentEvent](https://github.com/fabric8io/kubernetes-pipeline/blob/master/src/main/java/io/fabric8/kubernetes/workflow/elasticsearch/DeploymentEvent.java) are sent to elasticsearch (if running in the same namespace) when a pod or replication controller is deployed.
 
 
 ## Working with Elasticsearch
