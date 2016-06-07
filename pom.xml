@@ -33,6 +33,40 @@
     <description>Use Docker Images and Kubernetes Pods from pipeline.</description>
     <packaging>pom</packaging>
 
+    <url>http://fabric8.io/</url>
+    <inceptionYear>2015</inceptionYear>
+
+    <organization>
+        <name>Red Hat</name>
+        <url>http://redhat.com</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <!-- including A developer as it's required by the maven poms going into
+      central -->
+    <developers>
+        <developer>
+            <id>geeks</id>
+            <name>Fabric8 Development Team</name>
+            <organization>fabric8</organization>
+            <organizationUrl>http://fabric8.io/</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:ssh://github.com/fabric8io/kubernetes-pipeline.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/fabric8io/kubernetes-pipeline.git</developerConnection>
+        <url>https://github.com/fabric8io/kubernetes-pipeline</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <properties>
         <docker-client.version>1.0.12</docker-client.version>
         <es.version>2.1.1</es.version>
