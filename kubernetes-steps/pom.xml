@@ -19,22 +19,22 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>kubernetes-workflow-project</artifactId>
+        <artifactId>kubernetes-pipeline-project</artifactId>
         <groupId>io.fabric8</groupId>
         <version>1.3-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.fabric8.workflow</groupId>
+    <groupId>io.fabric8.pipeline</groupId>
     <artifactId>kubernetes-steps</artifactId>
-    <name>Fabric8 :: Workflow :: Kubernetes Steps</name>
+    <name>Kubernetes :: Pipeline :: Kubernetes Steps</name>
     <packaging>hpi</packaging>
 
     <dependencies>
 
         <dependency>
-            <groupId>io.fabric8.workflow</groupId>
-            <artifactId>fabric8-workflow-core</artifactId>
+            <groupId>io.fabric8.pipeline</groupId>
+            <artifactId>kubernetes-pipeline-core</artifactId>
         </dependency>
 
         <dependency>
