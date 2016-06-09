@@ -17,6 +17,7 @@
 package io.fabric8.kubernetes.pipeline;
 
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Status;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 
@@ -60,6 +61,12 @@ public class PodWatcher implements Watcher<Pod> {
             case DELETED:
                 finisied.countDown();
         }
+    }
+
+    @Override
+    public void errorReceived(Status status) {
+        finisied.countDown();
+        callCompletionCallback();
     }
 
     @Override
