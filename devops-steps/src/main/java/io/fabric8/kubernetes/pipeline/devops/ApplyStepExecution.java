@@ -220,12 +220,11 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
     }
 
     protected void createRoutes(KubernetesClient kubernetes, Collection<HasMetadata> collection, String namespace) throws AbortException {
-
+        String routeDomainPostfix = "";
         String domain = Systems.getEnvVarOrSystemProperty("DOMAIN");
-        if (Strings.isNullOrBlank(domain)) {
-            throw new AbortException("No DOMAIN environment variable set so cannot create routes");
+        if (Strings.isNotBlank(domain)) {
+            routeDomainPostfix = namespace + "." + domain;
         }
-        String routeDomainPostfix = namespace + "." + Systems.getEnvVarOrSystemProperty("DOMAIN");
 
         // lets get the routes first to see if we should bother
         try {
