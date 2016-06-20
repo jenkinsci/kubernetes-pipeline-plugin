@@ -64,12 +64,6 @@ public class PodWatcher implements Watcher<Pod> {
     }
 
     @Override
-    public void errorReceived(Status status) {
-        finisied.countDown();
-        callCompletionCallback();
-    }
-
-    @Override
     public void onClose(KubernetesClientException e) {
         finisied.countDown();
         callCompletionCallback();
