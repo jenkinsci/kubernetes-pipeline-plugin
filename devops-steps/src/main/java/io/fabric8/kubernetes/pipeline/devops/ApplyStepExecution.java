@@ -138,6 +138,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
             String registry = getRegistry();
             if (Strings.isNotBlank(registry)){
+                listener.getLogger().println("Adapting resources to use pull images from registry: " + registry);
                 addRegistryToImageNameIfNotPresent(entities, registry);
             }
 
@@ -213,7 +214,10 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
     private String getRegistry() {
         if (Strings.isNullOrBlank(step.getRegistry())) {
-            return env.get(Constants.DEFAULT_DOCKER_REGISTRY);
+            if (Strings.isNotBlank(env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST))){
+                return env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_PORT);
+            }
+            return null;
         } else {
             return step.getRegistry();
         }
