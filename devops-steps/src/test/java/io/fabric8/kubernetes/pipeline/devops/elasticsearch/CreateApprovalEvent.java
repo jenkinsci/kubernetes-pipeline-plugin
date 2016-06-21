@@ -16,37 +16,19 @@
 
 package io.fabric8.kubernetes.pipeline.devops.elasticsearch;
 
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import hudson.model.StreamBuildListener;
-
-import java.nio.charset.Charset;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-public class CreateEvent {
-    private static final Logger LOG = Logger.getLogger(BuildListener.class.getName());
-
-    private static hudson.model.BuildListener listener;
+public class CreateApprovalEvent extends BaseSendEvent {
 
     /**
      * Java main to test creating events in elasticsearch.  Set the following ENV VARS to point to a local ES running in OpenShift
      *
      * PIPELINE_ELASTICSEARCH_HOST=elasticsearch.vagrant.f8
      * ELASTICSEARCH_SERVICE_PORT=80
-     * @param args
      */
     public static void main(String[] args) {
         final ApprovalEventDTO approval = createTestApprovalEvent();
-        listener = new StreamBuildListener(System.out, Charset.defaultCharset());
-        try {
-            ObjectMapper mapper = JsonUtils.createObjectMapper();
-            String json = mapper.writeValueAsString(approval);
-            String id = ElasticsearchClient.createEvent(json, ElasticsearchClient.APPROVE , listener);
-        } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Error when sending build data: " + approval, e);
-        }
+        send(approval, ElasticsearchClient.APPROVE);
     }
 
     private static ApprovalEventDTO createTestApprovalEvent(){

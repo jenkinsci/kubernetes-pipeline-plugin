@@ -21,41 +21,31 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.model.StreamBuildListener;
 
 import java.nio.charset.Charset;
-import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static junit.framework.TestCase.assertTrue;
-
-public class UpdateEvent {
+public class BaseSendEvent {
     private static final Logger LOG = Logger.getLogger(BuildListener.class.getName());
 
-    private static hudson.model.BuildListener listener;
-
     /**
-     * Java main to test updating events in elasticsearch.  Set the following ENV VARS to point to a local ES running in OpenShift
+     * Java main to test creating events in elasticsearch.  Set the following ENV VARS to point to a local ES running in OpenShift
      *
      * PIPELINE_ELASTICSEARCH_HOST=elasticsearch.vagrant.f8
      * ELASTICSEARCH_SERVICE_PORT=80
-     * @param args
+     *
+     * @param event to send to elasticsearch
      */
-    public static void main(String[] args) {
-        final ApprovalEventDTO approval = createTestApprovalEvent();
-        listener = new StreamBuildListener(System.out, Charset.defaultCharset());
+    public static void send (DTOSupport event, String type){
+
+        hudson.model.BuildListener listener = new StreamBuildListener(System.out, Charset.defaultCharset());
         try {
             ObjectMapper mapper = JsonUtils.createObjectMapper();
-            String json = mapper.writeValueAsString(approval);
-            boolean success = ElasticsearchClient.updateEvent("AVPDduL8cythlwwByL1I", json, ElasticsearchClient.APPROVE , listener);
-            assertTrue(success);
+            String json = mapper.writeValueAsString(event);
+            String id = ElasticsearchClient.createEvent(json, type , listener);
+            listener.getLogger().println("Added events id: " + id);
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Error when updating event: " + approval, e);
+            LOG.log(Level.SEVERE, "Error when sending build data: " + event, e);
         }
     }
 
-    private static ApprovalEventDTO createTestApprovalEvent(){
-        ApprovalEventDTO event = new ApprovalEventDTO();
-        event.setApproved(true);
-        event.setReceivedTime(new Date());
-        return event;
-    }
 }

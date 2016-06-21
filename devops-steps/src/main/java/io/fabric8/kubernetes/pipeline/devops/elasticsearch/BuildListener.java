@@ -76,7 +76,7 @@ public class BuildListener extends RunListener<Run> {
         }
         build.setStartTime(new Date(run.getStartTimeInMillis()));
         build.setBuildNumber(run.getNumber());
-        build.setEnvironment(environment);
+        build.setEnvVars(environment);
         Calendar timestamp = run.getTimestamp();
         if (timestamp != null) {
             build.setTimestamp(timestamp.getTime());

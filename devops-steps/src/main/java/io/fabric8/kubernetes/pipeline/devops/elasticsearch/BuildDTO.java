@@ -31,21 +31,21 @@ public class BuildDTO extends DTOSupport {
     private String buildResult;
     private Date startTime;
     private long duration;
-    private Map<String, String> environment;
+    private Map<String, String> envVars;
     private String buildUrl;
     private List<CauseDTO> causes = new ArrayList<>();
 
     public BuildDTO() {
     }
 
-    public BuildDTO(Date timestamp, int buildNumber, String app, String buildResult, Date startTime, long duration, Map<String, String> environment) {
+    public BuildDTO(Date timestamp, int buildNumber, String app, String buildResult, Date startTime, long duration, Map<String, String> envVars) {
         this.timestamp = timestamp;
         this.buildNumber = buildNumber;
         this.app = app;
         this.buildResult = buildResult;
         this.startTime = startTime;
         this.duration = duration;
-        this.environment = environment;
+        this.envVars = envVars;
     }
 
     public void addCause(CauseDTO cause) {
@@ -95,12 +95,12 @@ public class BuildDTO extends DTOSupport {
         this.duration = duration;
     }
 
-    public Map<String, String> getEnvironment() {
-        return environment;
+    public Map<String, String> getEnvVars() {
+        return envVars;
     }
 
-    public void setEnvironment(Map<String, String> environment) {
-        this.environment = environment;
+    public void setEnvVars(Map<String, String> environment) {
+        this.envVars = environment;
     }
 
     public Date getTimestamp() {
@@ -120,7 +120,7 @@ public class BuildDTO extends DTOSupport {
                 ", result='" + buildResult + '\'' +
                 ", startTime=" + startTime +
                 ", duration=" + duration +
-                ", environment=" + environment +
+                ", envVars=" + envVars +
                 '}';
     }
 
