@@ -29,6 +29,8 @@ import io.fabric8.kubernetes.api.Controller;
 import io.fabric8.kubernetes.api.KubernetesHelper;
 import io.fabric8.kubernetes.api.ServiceNames;
 import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.extensions.Deployment;
+import io.fabric8.kubernetes.api.model.extensions.ReplicaSet;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.internal.HasMetadataComparator;
@@ -142,6 +144,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                 addRegistryToImageNameIfNotPresent(entities, registry);
             }
 
+            listener.getLogger().println("About to apply resource" + entities);
             //Apply all items
             for (HasMetadata entity : entities) {
                 if (entity instanceof Pod) {
@@ -157,6 +160,24 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                 } else if (entity instanceof ReplicationController) {
                     ReplicationController replicationController = (ReplicationController) entity;
                     controller.applyReplicationController(replicationController, fileName);
+
+                    String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
+                    ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
+
+                } else if (entity instanceof ReplicaSet) {
+                    controller.apply(entity, fileName);
+
+                    String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
+                    ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
+
+                } else if (entity instanceof Deployment) {
+                    controller.apply(entity, fileName);
+
+                    String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
+                    ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
+
+                } else if (entity instanceof DeploymentConfig) {
+                    controller.apply(entity, fileName);
 
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
@@ -345,10 +366,19 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     List<Container> containers = ((ReplicationController) item).getSpec().getTemplate().getSpec().getContainers();
                     prefixRegistryIfNotPresent(containers, registry);
 
+                } else if (item instanceof ReplicaSet) {
+                    List<Container> containers = ((ReplicaSet) item).getSpec().getTemplate().getSpec().getContainers();
+                    prefixRegistryIfNotPresent(containers, registry);
+
                 } else if (item instanceof DeploymentConfig) {
                     List<Container> containers = ((DeploymentConfig) item).getSpec().getTemplate().getSpec().getContainers();
                     prefixRegistryIfNotPresent(containers, registry);
+
+                } else if (item instanceof Deployment) {
+                    List<Container> containers = ((Deployment) item).getSpec().getTemplate().getSpec().getContainers();
+                    prefixRegistryIfNotPresent(containers, registry);
                 }
+
             }
         }
     }
