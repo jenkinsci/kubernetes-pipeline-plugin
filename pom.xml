@@ -61,9 +61,10 @@
     </developers>
 
     <scm>
-        <connection>scm:git:ssh://github.com/fabric8io/kubernetes-pipeline.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/fabric8io/kubernetes-pipeline.git</developerConnection>
-        <url>https://github.com/fabric8io/kubernetes-pipeline</url>
+	    https://github.com/jenkinsci/kubernetes-pipeline-plugin.git
+	    <connection>scm:git:ssh://github.com/jenkinsci/kubernetes-pipeline-plugin.git</connection>
+	    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/kubernetes-pipeline-plugin.git</developerConnection>
+	    <url>https://github.com/jenkinsci/kubernetes-pipeline-plugin</url>
         <tag>HEAD</tag>
     </scm>
 
