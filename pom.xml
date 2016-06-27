@@ -61,7 +61,6 @@
     </developers>
 
     <scm>
-	    https://github.com/jenkinsci/kubernetes-pipeline-plugin.git
 	    <connection>scm:git:ssh://github.com/jenkinsci/kubernetes-pipeline-plugin.git</connection>
 	    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/kubernetes-pipeline-plugin.git</developerConnection>
 	    <url>https://github.com/jenkinsci/kubernetes-pipeline-plugin</url>
