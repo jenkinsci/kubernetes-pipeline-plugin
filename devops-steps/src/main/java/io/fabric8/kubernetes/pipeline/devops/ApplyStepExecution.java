@@ -251,17 +251,24 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             routeDomainPostfix = namespace + "." + domain;
         }
 
-        // lets get the routes first to see if we should bother
-        try {
-            RouteList routes = kubernetes.adapt(OpenShiftClient.class).routes().inNamespace(namespace).list();
-            if (routes != null) {
-                routes.getItems();
-            }
-        } catch (Exception e) {
-
-            throw new AbortException("Cannot load OpenShift Routes; maybe not connected to an OpenShift platform? " + e);
-
+        // lets see if we are in OpenShift first
+        Controller controller = new Controller(getKubernetes());
+        if (controller.getOpenShiftClientOrNull() == null) {
+            // TODO create Ingress?
+            listener.getLogger().println("Not on OpenShift so not creating Routes");
+            return;
         }
+
+        // TODO should we generate Routes by default?
+        // lets only do so if there is a route service in the current namespace??
+        Service router = kubernetes.services().withName("router").get();
+        if (router == null) {
+            listener.getLogger().println("No router service so not creating Routes");
+            return;
+        } else {
+            listener.getLogger().println("Found router service so lets create Routes");
+        }
+
         List<Route> routes = new ArrayList<>();
         for (Object object : collection) {
             if (object instanceof Service) {
