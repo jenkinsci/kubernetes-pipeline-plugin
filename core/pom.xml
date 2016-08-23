@@ -27,6 +27,7 @@
     <artifactId>kubernetes-pipeline-core</artifactId>
     <packaging>jar</packaging>
     <name>Kubernetes :: Pipeline :: Core</name>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Kubernetes+Pipeline+Plugin</url>
 
     <dependencies>
         <dependency>

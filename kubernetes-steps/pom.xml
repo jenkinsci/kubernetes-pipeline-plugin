@@ -27,6 +27,7 @@
     <artifactId>kubernetes-pipeline-steps</artifactId>
     <name>Kubernetes :: Pipeline :: Kubernetes Steps</name>
     <packaging>hpi</packaging>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Kubernetes+Pipeline+Plugin</url>
 
     <dependencies>
 
