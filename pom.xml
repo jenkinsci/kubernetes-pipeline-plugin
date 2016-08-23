@@ -32,7 +32,7 @@
     <description>Use Docker Images and Kubernetes Pods from pipeline.</description>
     <packaging>pom</packaging>
 
-    <url>http://fabric8.io/</url>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Kubernetes+Pipeline+Plugin</url>
     <inceptionYear>2015</inceptionYear>
 
     <organization>

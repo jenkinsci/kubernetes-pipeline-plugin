@@ -27,6 +27,7 @@
     <artifactId>kubernetes-pipeline-aggregator</artifactId>
     <name>Kubernetes :: Pipeline :: Aggregator</name>
     <packaging>hpi</packaging>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Kubernetes+Pipeline+Plugin</url>
 
     <dependencies>
         <!-- Internal Deps -->
