@@ -107,7 +107,7 @@ class Kubernetes implements Serializable {
 
         public Pod withEmptyDir(String mountPath, String medium) {
             Map<String, String> newEmptyDirs = new HashMap<>(emptyDirs)
-            newEmptyDirs.put(emptyDir, medium)
+            newEmptyDirs.put(mountPath, medium)
             return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, env)
         }
 
