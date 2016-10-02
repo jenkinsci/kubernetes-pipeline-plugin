@@ -132,10 +132,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
             entities.addAll(KubernetesHelper.toItemList(dto));
 
-            if (KubernetesHelper.isOpenShift(kubernetes)) {
-                createRoutes(kubernetes, entities, environment);
-            }
-
             addEnvironmentAnnotations(entities);
 
             String registry = getRegistry();
@@ -242,73 +238,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         } else {
             return step.getRegistry();
         }
-    }
-
-    protected void createRoutes(KubernetesClient kubernetes, Collection<HasMetadata> collection, String namespace) throws AbortException {
-        String routeDomainPostfix = "";
-        String domain = Systems.getEnvVarOrSystemProperty("DOMAIN");
-        if (Strings.isNotBlank(domain)) {
-            routeDomainPostfix = namespace + "." + domain;
-        }
-
-        // lets see if we are in OpenShift first
-        Controller controller = new Controller(getKubernetes());
-        if (controller.getOpenShiftClientOrNull() == null) {
-            // TODO create Ingress?
-            listener.getLogger().println("Not on OpenShift so not creating Routes");
-            return;
-        }
-
-        // TODO should we generate Routes by default?
-        // lets only do so if there is a route service in the current namespace??
-        Service router = kubernetes.services().withName("router").get();
-        if (router == null) {
-            listener.getLogger().println("No router service so not creating Routes");
-            return;
-        } else {
-            listener.getLogger().println("Found router service so lets create Routes");
-        }
-
-        List<Route> routes = new ArrayList<>();
-        for (Object object : collection) {
-            if (object instanceof Service) {
-                Service service = (Service) object;
-                Route route = createRouteForService(routeDomainPostfix, namespace, service, listener);
-                if (route != null) {
-                    routes.add(route);
-                }
-            }
-        }
-        collection.addAll(routes);
-    }
-
-    public static Route createRouteForService(String routeDomainPostfix, String namespace, Service service, TaskListener listener) {
-        Route route = null;
-        String id = KubernetesHelper.getName(service);
-        if (Strings.isNotBlank(id) && shouldCreateRouteForService(service, id, listener)) {
-            route = new Route();
-            String routeId = id;
-            KubernetesHelper.setName(route, namespace, routeId);
-            RouteSpec routeSpec = new RouteSpec();
-            ObjectReference objectRef = new ObjectReference();
-            objectRef.setName(id);
-            objectRef.setNamespace(namespace);
-            routeSpec.setTo(objectRef);
-            if (!Strings.isNullOrBlank(routeDomainPostfix)) {
-                String host = Strings.stripSuffix(Strings.stripSuffix(id, "-service"), ".");
-                routeSpec.setHost(host + "." + Strings.stripPrefix(routeDomainPostfix, "."));
-            } else {
-                routeSpec.setHost("");
-            }
-            route.setSpec(routeSpec);
-            String json;
-            try {
-                json = KubernetesHelper.toJson(route);
-            } catch (JsonProcessingException e) {
-                json = e.getMessage() + ". object: " + route;
-            }
-        }
-        return route;
     }
 
     /**
