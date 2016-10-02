@@ -51,7 +51,7 @@ public class ElasticsearchClient {
         String port = Systems.getEnvVarOrSystemProperty("ELASTICSEARCH_SERVICE_PORT", "9200");
 
         if (!isUrlReachable(protocol + "://" + server + ":" + port)){
-            listener.getLogger().println("Unable to connect to Elasticsearch service. Check Elasticsearch is running in the correct namespace");
+            // don't log as it causes confusion in the jenkins build console
             return null;
         } else {
             listener.getLogger().println("Found Elasticsearch server, sending:"+json);
