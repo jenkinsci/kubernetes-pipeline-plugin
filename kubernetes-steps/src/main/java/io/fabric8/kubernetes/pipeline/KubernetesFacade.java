@@ -81,7 +81,7 @@ public final class KubernetesFacade implements Closeable {
 
             volumes.add(new VolumeBuilder()
                     .withName(VOLUME_PREFIX + volumeIndex)
-                    .withNewSecret(secret)
+                    .withNewSecret().withSecretName(secret).endSecret()
                     .build());
             mounts.add(new VolumeMountBuilder()
                     .withName(VOLUME_PREFIX + volumeIndex)
@@ -206,14 +206,15 @@ public final class KubernetesFacade implements Closeable {
                 .writingError(out)
                 .withTTY()
                 .usingListener(new ExecListener() {
+
                     @Override
-                    public void onOpen(Response response) {
+                    public void onOpen(okhttp3.Response response) {
                         alive.set(true);
                         started.countDown();
-
                     }
+
                     @Override
-                    public void onFailure(IOException e, Response response) {
+                    public void onFailure(IOException e, okhttp3.Response response) {
                         alive.set(false);
                         e.printStackTrace(out);
                         started.countDown();
