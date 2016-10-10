@@ -163,6 +163,9 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
                 } else {
                     return client.image().withName(step.getName()).inspect();
                 }
+            } catch (Throwable t) {
+                t.printStackTrace(listener.getLogger());
+                return null;
             } finally {
                 if (handle != null) {
                     handle.close();
