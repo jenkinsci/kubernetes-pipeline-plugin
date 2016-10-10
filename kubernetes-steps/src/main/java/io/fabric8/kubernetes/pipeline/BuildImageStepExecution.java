@@ -92,11 +92,15 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
             @Override
             public ImageInspect call() throws Exception {
                 ExecutorService executorService = Executors.newFixedThreadPool(2);
-                try (PipedInputStream pin = new PipedInputStream();
-                     PipedOutputStream pout = new PipedOutputStream(pin)) {
+                try {
+                    Future<Boolean> createTarFuture;
+                    Future<ImageInspect> buildImageFuture;
+                    try (PipedInputStream pin = new PipedInputStream();
+                         PipedOutputStream pout = new PipedOutputStream(pin)) {
 
-                    Future<Boolean> createTarFuture = executorService.submit(new CreateTarTask(pout));
-                    Future<ImageInspect> buildImageFuture = executorService.submit(new BuildImageTask(pin));
+                        createTarFuture = executorService.submit(new CreateTarTask(pout));
+                        buildImageFuture = executorService.submit(new BuildImageTask(pin));
+                    }
 
                     //Wait for the two tasks to complete.
                     if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
