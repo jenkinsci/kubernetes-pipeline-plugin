@@ -68,7 +68,10 @@ public class BuildListener extends RunListener<Run> {
         }
 
         final BuildDTO build = new BuildDTO();
-        build.setDuration(run.getDuration());
+        
+        long duration = System.currentTimeMillis() - run.getStartTimeInMillis();
+        build.setDuration(duration);
+        
         build.setApp(job.getFullName());
         Result result = run.getResult();
         if (result != null) {
