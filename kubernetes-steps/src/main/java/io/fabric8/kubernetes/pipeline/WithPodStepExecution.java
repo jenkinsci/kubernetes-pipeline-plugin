@@ -68,6 +68,7 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
                 step.getSecrets(),
                 step.getHostPathMounts(),
                 step.getEmptyDirs(),
+                step.getVolumeClaims(),
                 workspace.getRemote(),
                 createPodEnv((step.getEnv())
                 ), "cat");
