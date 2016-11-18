@@ -16,7 +16,6 @@
 
 package io.fabric8.kubernetes.pipeline;
 
-import com.squareup.okhttp.Response;
 import io.fabric8.docker.client.utils.Utils;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Node;
@@ -63,7 +62,7 @@ public final class KubernetesFacade implements Closeable {
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public Pod createPod(String hostname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, String workspace, List<EnvVar> env, String cmd) {
+    public Pod createPod(String hostname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> volumeClaims, String workspace, List<EnvVar> env, String cmd) {
         LOGGER.info("Creating pod with name:" + name);
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
@@ -124,6 +123,22 @@ public final class KubernetesFacade implements Closeable {
             volumes.add(new VolumeBuilder()
                     .withName(VOLUME_PREFIX + volumeIndex)
                     .withNewEmptyDir(medium)
+                    .build());
+
+            mounts.add(new VolumeMountBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withMountPath(mountPath)
+                    .build());
+            volumeIndex++;
+        }
+
+        for (Map.Entry<String, String> entry : volumeClaims.entrySet()) {
+            String mountPath = entry.getKey();
+            String medium = entry.getValue();
+
+            volumes.add(new VolumeBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withNewPersistentVolumeClaim(medium, false)
                     .build());
 
             mounts.add(new VolumeMountBuilder()
