@@ -54,6 +54,13 @@ This also supports specifying the medium (e.g. "Memory")
         sh 'mvn clean install'
     }                
     
+#### Using volume claim mounts
+    
+    kubernetes.pod('buildpod').withImage('maven').withVolumeClaimMount('/path/on/container', 'volume-claim-name').inside {      
+        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
+        sh 'mvn clean install'
+    }  
+      
 ### Using privileged containers
 
     kubernetes.pod('buildpod').withImage('maven').withPrivileged(true).inside {      
