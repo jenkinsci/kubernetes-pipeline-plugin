@@ -67,6 +67,16 @@ public class BuildListener extends RunListener<Run> {
             LOG.log(Level.WARNING, "Error getting environment", e);
         }
 
+        // ES doesnt like '.' in env var key names so replace any with '_' 
+        for (String key :environment.keySet()) {
+            if (key.contains(".")){
+                String value = environment.get(key, "");
+                environment.remove(key);
+                environment.put(key.replace(".", "_"), value);
+            }
+        }
+
+
         final BuildDTO build = new BuildDTO();
         
         long duration = System.currentTimeMillis() - run.getStartTimeInMillis();
