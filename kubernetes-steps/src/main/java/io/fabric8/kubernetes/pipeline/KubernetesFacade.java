@@ -16,7 +16,6 @@
 
 package io.fabric8.kubernetes.pipeline;
 
-import com.squareup.okhttp.Response;
 import io.fabric8.docker.client.utils.Utils;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Node;
@@ -25,6 +24,7 @@ import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -62,17 +62,24 @@ public final class KubernetesFacade implements Closeable {
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public Pod createPod(String hostname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, String workspace, List<EnvVar> env, String cmd) {
+    public Pod createPod(String hostname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> volumeClaims, String workspace, List<EnvVar> env, String cmd) {
         LOGGER.info("Creating pod with name:" + name);
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
 
         int volumeIndex = 1;
 
-        //mandatory volumes
-        volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewHostPath(workspace).build());
-        mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(workspace).build());
-        volumeIndex++;
+        // mount jenkins-workspace pvc if available
+        String pvcName = "jenkins-workspace";
+        PersistentVolumeClaim pvc = client.persistentVolumeClaims().withName(pvcName).get();
+        if (pvc == null) {
+            LOGGER.warning("Failed to find pvc with name:" + pvcName + " in namespace:" + client.getNamespace() + ".");
+        }
+        else {
+            volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewPersistentVolumeClaim(pvcName, false).build());
+            mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(workspace).build());
+            volumeIndex++;
+        }
 
         //Add secrets first
         for (Map.Entry<String, String> entry : secrets.entrySet()) {
@@ -116,6 +123,22 @@ public final class KubernetesFacade implements Closeable {
             volumes.add(new VolumeBuilder()
                     .withName(VOLUME_PREFIX + volumeIndex)
                     .withNewEmptyDir(medium)
+                    .build());
+
+            mounts.add(new VolumeMountBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withMountPath(mountPath)
+                    .build());
+            volumeIndex++;
+        }
+
+        for (Map.Entry<String, String> entry : volumeClaims.entrySet()) {
+            String mountPath = entry.getKey();
+            String medium = entry.getValue();
+
+            volumes.add(new VolumeBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withNewPersistentVolumeClaim(medium, false)
                     .build());
 
             mounts.add(new VolumeMountBuilder()

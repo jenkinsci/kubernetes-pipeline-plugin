@@ -37,10 +37,11 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
     private final Map secrets;
     private final Map hostPathMounts;
     private final Map emptyDirs;
+    private final Map volumeClaims;
     private final Map env;
 
     @DataBoundConstructor
-    public WithPodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map env) {
+    public WithPodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map volumeClaims, Map env) {
         this.name = name;
         this.image = image;
         this.serviceAccount = serviceAccount;
@@ -48,6 +49,7 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
         this.secrets = secrets != null ? secrets : new HashMap();
         this.hostPathMounts = hostPathMounts != null ? hostPathMounts : new HashMap();
         this.emptyDirs = emptyDirs != null ? emptyDirs : new HashMap();
+        this.volumeClaims = volumeClaims != null ? volumeClaims : new HashMap();
         this.env = env != null ? env : new HashMap();
     }
 
@@ -77,6 +79,10 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
 
     public Map getEmptyDirs() {
         return emptyDirs;
+    }
+
+    public Map getVolumeClaims() {
+        return volumeClaims;
     }
 
     public Map getEnv() {
