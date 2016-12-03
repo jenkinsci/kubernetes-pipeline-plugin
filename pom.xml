@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.596.1</version>
+        <version>2.14</version>
     </parent>
 
     <groupId>io.fabric8</groupId>
@@ -76,7 +76,24 @@
         <kubernetes-client.version>1.4.14</kubernetes-client.version>
         <maven-hpi-plugin.version>1.112</maven-hpi-plugin.version>
         <restassured.version>1.7.2</restassured.version>
-        <workflow.version>1.7-alpha-1</workflow.version>
+
+        <!-- jenkins plugins versions -->
+        <jenkins-basic-steps.version>2.1</jenkins-basic-steps.version>
+        <jenkins-credentials.version>1.24</jenkins-credentials.version>
+        <jenkins-docker-commons.version>1.0</jenkins-docker-commons.version>
+        <jenkins-durable-task.version>1.12</jenkins-durable-task.version>
+        <jenkins-durable-task-step.version>2.4</jenkins-durable-task-step.version>
+        <jenkins-git.version>2.4.1</jenkins-git.version>
+        <jenkins-git-client.version>1.19.2</jenkins-git-client.version>
+        <jenkins-mailer.version>1.16</jenkins-mailer.version>
+        <jenkins-pipeline-stage-step.version>2.2</jenkins-pipeline-stage-step.version>
+        <jenkins-script-security.version>1.14</jenkins-script-security.version>
+        <jenkins-ssh-credentials.version>1.11</jenkins-ssh-credentials.version>
+        <jenkins-structs.version>1.5</jenkins-structs.version>
+        <jenkins-workflow-cps.version>2.17</jenkins-workflow-cps.version>
+        <jenkins-workflow-job.version>2.6</jenkins-workflow-job.version>
+        <jenkins-workflow-step-api.version>2.3</jenkins-workflow-step-api.version>
+        <jenkins-workflow-support.version>2.5</jenkins-workflow-support.version>
     </properties>
 
     <modules>
@@ -88,6 +105,7 @@
 
     <dependencyManagement>
         <dependencies>
+
             <!-- Own Modules -->
             <dependency>
                 <groupId>io.fabric8.pipeline</groupId>
@@ -107,11 +125,13 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <!-- Dependencies -->
             <dependency>
                 <groupId>io.fabric8</groupId>
                 <artifactId>kubernetes-api</artifactId>
                 <version>${fabric8.version}</version>
             </dependency>
+
             <dependency>
                 <groupId>io.fabric8</groupId>
                 <artifactId>fabric8-devops</artifactId>
@@ -139,6 +159,7 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+
             <dependency>
                 <groupId>com.jayway.restassured</groupId>
                 <artifactId>rest-assured</artifactId>
@@ -158,68 +179,104 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+
+            <!-- required plugins -->
             <dependency>
                 <groupId>org.jenkins-ci.plugins</groupId>
-                <artifactId>git-client</artifactId>
-                <version>${git-client.version}</version>
+                <artifactId>credentials</artifactId>
+                <version>${jenkins-credentials.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jenkins-ci.plugins</groupId>
                 <artifactId>docker-commons</artifactId>
-                <version>1.0</version>
+                <version>${jenkins-docker-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>durable-task</artifactId>
+                <version>${jenkins-durable-task.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>git-client</artifactId>
+                <version>${jenkins-git-client.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jenkins-ci.plugins</groupId>
                 <artifactId>script-security</artifactId>
-                <version>1.14</version>
+                <version>${jenkins-structs.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>structs</artifactId>
+                <version>${jenkins-structs.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jenkins-ci.plugins.workflow</groupId>
                 <artifactId>workflow-step-api</artifactId>
-                <version>${workflow.version}</version>
+                <version>${jenkins-workflow-step-api.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jenkins-ci.plugins.workflow</groupId>
                 <artifactId>workflow-cps</artifactId>
-                <version>${workflow.version}</version>
+                <version>${jenkins-workflow-cps.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jenkins-ci.plugins.workflow</groupId>
-                <artifactId>workflow-aggregator</artifactId>
-                <version>${workflow.version}</version>
+                <artifactId>workflow-durable-task-step</artifactId>
+                <version>${jenkins-durable-task-step.version}</version>
+            </dependency>
+
+            <!-- for testing -->
+            <dependency>
+                <groupId>org.jenkins-ci.plugins.workflow</groupId>
+                <artifactId>workflow-job</artifactId>
+                <version>${jenkins-workflow-job.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.jenkins-ci.plugins.workflow</groupId>
-                <artifactId>workflow-aggregator</artifactId>
-                <classifier>tests</classifier>
-                <version>${workflow.version}</version>
+                <artifactId>workflow-basic-steps</artifactId>
+                <version>${jenkins-basic-steps.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency> <!-- StepConfigTester -->
                 <groupId>org.jenkins-ci.plugins.workflow</groupId>
                 <artifactId>workflow-step-api</artifactId>
+                <version>${jenkins-workflow-step-api.version}</version>
                 <classifier>tests</classifier>
-                <version>${workflow.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency> <!-- SemaphoreStep -->
                 <groupId>org.jenkins-ci.plugins.workflow</groupId>
                 <artifactId>workflow-support</artifactId>
+                <version>${jenkins-workflow-support.version}</version>
                 <classifier>tests</classifier>
-                <version>${workflow.version}</version>
                 <scope>test</scope>
             </dependency>
-            <dependency> <!-- otherwise tests get linkage errors from org.jenkinsci.plugins.gitserver.ssh.SshCommandFactoryImpl -->
-                <groupId>org.jenkins-ci.modules</groupId>
-                <artifactId>sshd</artifactId>
-                <version>1.6</version>
+
+            <!-- for hpi:run -->
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>git</artifactId>
+                <version>${jenkins-git.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>org.jenkins-ci.plugins.workflow</groupId>
-                <artifactId>workflow-durable-task-step</artifactId>
-                <version>${workflow.version}</version>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>mailer</artifactId>
+                <version>${jenkins-mailer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>pipeline-stage-step</artifactId>
+                <version>${jenkins-pipeline-stage-step.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>ssh-credentials</artifactId>
+                <version>${jenkins-ssh-credentials.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -265,3 +322,4 @@
     </pluginRepositories>
 
 </project>
+

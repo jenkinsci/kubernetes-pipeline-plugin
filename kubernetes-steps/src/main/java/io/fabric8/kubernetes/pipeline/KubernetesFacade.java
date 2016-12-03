@@ -16,7 +16,6 @@
 
 package io.fabric8.kubernetes.pipeline;
 
-import com.squareup.okhttp.Response;
 import io.fabric8.docker.client.utils.Utils;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Node;
@@ -25,6 +24,7 @@ import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -35,6 +35,7 @@ import io.fabric8.kubernetes.client.dsl.LogWatch;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,17 +63,39 @@ public final class KubernetesFacade implements Closeable {
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public Pod createPod(String hostname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, String workspace, List<EnvVar> env, String cmd) {
+    public Pod createPod(String hostname, String jobname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> volumeClaims, String buildWorkspace, List<EnvVar> env, String cmd) {
         LOGGER.info("Creating pod with name:" + name);
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
 
         int volumeIndex = 1;
-
-        //mandatory volumes
-        volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewHostPath(workspace).build());
-        mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(workspace).build());
-        volumeIndex++;
+        String rootWorkspace = Paths.get(buildWorkspace).getParent().toAbsolutePath().toString();
+        if (hasWorkspaceMount(rootWorkspace, hostPathMounts, emptyDirs, volumeClaims)) {
+            LOGGER.info("Found volume mount for workspace:[" + buildWorkspace + "].");
+        } else if (hasWorkspaceMount(buildWorkspace, hostPathMounts, emptyDirs, volumeClaims)) {
+            LOGGER.info("Found volume mount for build workspace:[" + buildWorkspace + "].");
+        } else {
+            // mount jenkins-workspace pvc if available
+            String rootPvcName = "jenkins-workspace";
+            String buildPvcName = "jenkins-workspace-" + jobname;
+            if (client.persistentVolumeClaims().withName(buildPvcName).get() != null) {
+                LOGGER.info("Using build pvc: ["+buildPvcName+"] for build workspace:[" + buildWorkspace + "].");
+                volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewPersistentVolumeClaim(buildPvcName, false).build());
+                mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(buildWorkspace).build());
+                volumeIndex++;
+            } else if (client.persistentVolumeClaims().withName(rootPvcName).get() != null) {
+                LOGGER.info("Using workspace pvc: ["+rootPvcName+"] for workspace:[" + rootWorkspace + "].");
+                volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewPersistentVolumeClaim(rootPvcName, false).build());
+                mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(rootWorkspace).build());
+                volumeIndex++;
+            }
+            else {
+                LOGGER.warning("No volume mount for workspace. And no pvc named: [jenkins-workspace] found. Falling back to hostPath volumes.");
+                volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewHostPath(buildWorkspace).build());
+                mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(buildWorkspace).build());
+                volumeIndex++;
+            }
+        }
 
         //Add secrets first
         for (Map.Entry<String, String> entry : secrets.entrySet()) {
@@ -104,7 +127,6 @@ public final class KubernetesFacade implements Closeable {
                     .withName(VOLUME_PREFIX + volumeIndex)
                     .withMountPath(mountPath)
                     .build());
-
             volumeIndex++;
         }
 
@@ -116,6 +138,22 @@ public final class KubernetesFacade implements Closeable {
             volumes.add(new VolumeBuilder()
                     .withName(VOLUME_PREFIX + volumeIndex)
                     .withNewEmptyDir(medium)
+                    .build());
+
+            mounts.add(new VolumeMountBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withMountPath(mountPath)
+                    .build());
+            volumeIndex++;
+        }
+
+        for (Map.Entry<String, String> entry : volumeClaims.entrySet()) {
+            String mountPath = entry.getKey();
+            String medium = entry.getValue();
+
+            volumes.add(new VolumeBuilder()
+                    .withName(VOLUME_PREFIX + volumeIndex)
+                    .withNewPersistentVolumeClaim(medium, false)
                     .build());
 
             mounts.add(new VolumeMountBuilder()
@@ -140,7 +178,7 @@ public final class KubernetesFacade implements Closeable {
                 .withName("podstep")
                 .withImage(image)
                 .withEnv(env)
-                .withWorkingDir(workspace)
+                .withWorkingDir(buildWorkspace)
                 .withCommand("/bin/sh", "-c")
                 .withArgs(cmd) // Always get the last part
                 .withTty(true) //It screws up getLog() if tty = true
@@ -157,16 +195,20 @@ public final class KubernetesFacade implements Closeable {
     }
 
     private Node getNodeOfPod(String podName) {
+        Node node;
         if (Utils.isNullOrEmpty(podName)) {
             LOGGER.warning("Failed to find the current pod name.");
             return null;
         }
+
         Pod pod = client.pods().withName(podName).get();
         if (pod == null) {
             LOGGER.warning("Failed to find pod with name:" + podName + " in namespace:" + client.getNamespace() + ".");
+            node = null;
+        } else {
+            String nodeName = pod.getSpec().getNodeName();
+            node = client.nodes().withName(nodeName).get();
         }
-        String nodeName = pod.getSpec().getNodeName();
-        Node node = client.nodes().withName(nodeName).get();
         if (node == null) {
             LOGGER.warning("Failed to find pod with name:" + podName + ".");
             return null;
@@ -283,6 +325,17 @@ public final class KubernetesFacade implements Closeable {
             }
             closeables.clear();
         }
+    }
+
+    public static boolean hasWorkspaceMount(String workspace, Map<String, String> ...mounts) {
+        for (Map<String, String> mount : mounts) {
+            for (String key : mount.keySet()) {
+                if (key.equals(workspace)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static final boolean isPodRunning(Pod pod) {

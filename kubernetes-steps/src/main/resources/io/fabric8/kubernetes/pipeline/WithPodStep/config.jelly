@@ -31,5 +31,9 @@
 			<f:repeatableHeteroProperty field="hostPathMounts" hasHeader="true" addCaption="Add Empty Dir"
 				deleteCaption="Delete Empty Dir"/>
 		</f:entry>
+		<f:entry title="VolumeClaim Mounts" description="A list of Volume Claim Mounts (Mount Path -> Volume Claim Name)">
+			<f:repeatableHeteroProperty field="volumeClaimMounts" hasHeader="true" addCaption="Add Volume Claim"
+				deleteCaption="Delete Volume Claim"/>
+		</f:entry>
 	</f:advanced>
 </j:jelly>

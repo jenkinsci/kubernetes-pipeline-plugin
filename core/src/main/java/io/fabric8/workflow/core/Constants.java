@@ -39,6 +39,8 @@ public class Constants {
     public static final String HOSTNAME = "HOSTNAME";
     public static final String KUBERNETES_HOSTNAME = "kubernetes.io/hostname";
 
+    public static final String JOB_NAME = "JOB_NAME";
+
     public static final String[] DEFAULT_IGNORE_PATTERNS = {DOCKER_IGNORE, ".git", ".git/*"};
 
 }

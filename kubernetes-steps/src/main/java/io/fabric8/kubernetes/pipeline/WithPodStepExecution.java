@@ -63,11 +63,13 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
         final KubernetesFacade kubernetes = new KubernetesFacade();
 
         //Get host using env vars and fallback to computer name (integration point with kubernetes-plugin).
-        String currentPodName = env.get(Constants.HOSTNAME, computer.getName());
-        kubernetes.createPod(currentPodName, podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(),
+        String hostname = env.get(Constants.HOSTNAME, computer.getName());
+        String jobname = env.get(Constants.JOB_NAME, computer.getName());
+        kubernetes.createPod(hostname, jobname,  podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(),
                 step.getSecrets(),
                 step.getHostPathMounts(),
                 step.getEmptyDirs(),
+                step.getVolumeClaims(),
                 workspace.getRemote(),
                 createPodEnv((step.getEnv())
                 ), "cat");

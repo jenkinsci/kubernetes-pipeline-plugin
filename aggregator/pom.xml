@@ -67,13 +67,15 @@
             <groupId>com.jayway.restassured</groupId>
             <artifactId>rest-assured</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>git-client</artifactId>
-        </dependency>
+
+
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>docker-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>git-client</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -87,17 +89,6 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
-            <artifactId>workflow-aggregator</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
-            <artifactId>workflow-aggregator</artifactId>
-            <classifier>tests</classifier>
-            <scope>test</scope>
-        </dependency>
         <dependency> <!-- StepConfigTester -->
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
@@ -108,11 +99,6 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
             <classifier>tests</classifier>
-            <scope>test</scope>
-        </dependency>
-        <dependency> <!-- otherwise tests get linkage errors from org.jenkinsci.plugins.gitserver.ssh.SshCommandFactoryImpl -->
-            <groupId>org.jenkins-ci.modules</groupId>
-            <artifactId>sshd</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
