@@ -67,6 +67,28 @@ This also supports specifying the medium (e.g. "Memory")
         git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }   
+   
+### Workspace Requirements
+ 
+The build pod needs to access the workspace of the project. This can be achieved with the use of volume mounts.
+You can configure volume mounts manually in order to mount `/home/jenkins/workspace` or `/home/jenkins/workspace/<job name>`
+or let the plugin configure them for you.
+
+The plugin will search and reuse any volume mounts you've configured for these paths. 
+
+If none is found it will try to create them using Persistent Volume Claims or Host Path mounts.
+
+#### Using Persistent Volume Claim
+
+If there is a pvc named `jenkins-workspace` the plugin will automatically mount it to `/home/jenkins/workspace`.
+Else if there is a pvc named `jenkins-workspace-<job name>` the plugin will automatically mount it to `/home/jenkins/workspace/<job name>`.
+
+If none of the above is found it will fallback to hostPath volumes.
+
+#### Using Host Path Volumes
+
+As a last resort the plugin will try to mount the hostPath `/home/jenkins/workspace`.
+In some case host path volumes are not allowed, so this is the last resort and should be avoided as much as possible.     
     
 ## Working with Docker Images
 

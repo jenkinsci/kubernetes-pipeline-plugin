@@ -113,9 +113,9 @@ class Kubernetes implements Serializable {
             return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, volumeClaims, env)
         }
 
-        public Pod withVolumeClaim(String mountPath, String medium) {
+        public Pod withVolumeClaim(String mountPath, String claimName) {
             Map<String, String> newVolumeClaims = new HashMap<>(emptyDirs)
-            newVolumeClaims.put(mountPath, medium)
+            newVolumeClaims.put(mountPath, claimName)
             return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newVolumeClaims, env)
         }
 
