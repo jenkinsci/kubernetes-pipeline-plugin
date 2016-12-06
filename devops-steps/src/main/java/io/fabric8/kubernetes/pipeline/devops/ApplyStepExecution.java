@@ -79,9 +79,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.fabric8.utils.PropertiesHelper.toMap;
-
-public class ApplyStepExecution extends AbstractSynchronousStepExecution<String> {
+public class ApplyStepExecution extends AbstractSynchronousStepExecution<Set<HasMetadata>> {
 
     @Inject
     private transient ApplyStep step;
@@ -98,8 +96,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
     private KubernetesClient kubernetes;
 
     @Override
-    public String run() throws Exception {
-
+    public Set<HasMetadata> run() throws Exception {
+        Set<HasMetadata> entities = new TreeSet<>(new HasMetadataComparator());
         String environment = step.getEnvironment();
         String environmentName = step.getEnvironmentName();
         if (StringUtils.isBlank(environmentName)) {
@@ -144,8 +142,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
 
             Set<KubernetesList> kubeConfigs = new LinkedHashSet<>();
-
-            Set<HasMetadata> entities = new TreeSet<>(new HasMetadataComparator());
             for (KubernetesList c : kubeConfigs) {
                 entities.addAll(c.getItems());
             }
@@ -206,7 +202,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             String stacktrace = ExceptionUtils.getStackTrace(e);
             throw new AbortException("Error during kubernetes apply: " + stacktrace);
         }
-        return "OK";
+        return entities;
     }
 
     private void createEnvironment(String environment, Controller controller) throws Exception {
