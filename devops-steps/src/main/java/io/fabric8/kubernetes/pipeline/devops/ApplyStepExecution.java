@@ -48,6 +48,7 @@ import io.fabric8.kubernetes.pipeline.devops.git.GitConfig;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jenkinsci.plugins.gitclient.Git;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.workflow.steps.*;
@@ -183,7 +184,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                 }
             }
         } catch (Exception e) {
-            throw new AbortException("Error during kubernetes apply: " + e.getMessage());
+            String stacktrace = ExceptionUtils.getStackTrace(e);
+            throw new AbortException("Error during kubernetes apply: " + stacktrace);
         }
         return "OK";
     }
