@@ -16,21 +16,30 @@
 
 package io.fabric8.kubernetes.pipeline;
 
+import org.csanchez.jenkins.plugins.kubernetes.ContainerEnvVar;
+import org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate;
+import org.csanchez.jenkins.plugins.kubernetes.PodEnvVar;
+import org.csanchez.jenkins.plugins.kubernetes.PodTemplate;
+import org.csanchez.jenkins.plugins.kubernetes.volumes.PodVolume;
+
 import io.fabric8.docker.client.utils.Utils;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import okhttp3.Response;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -40,12 +49,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static io.fabric8.workflow.core.Constants.EXIT;
 import static io.fabric8.workflow.core.Constants.FAILED_PHASE;
@@ -54,142 +64,104 @@ import static io.fabric8.workflow.core.Constants.RUNNING_PHASE;
 import static io.fabric8.workflow.core.Constants.SPACE;
 import static io.fabric8.workflow.core.Constants.SUCCEEDED_PHASE;
 import static io.fabric8.workflow.core.Constants.UTF_8;
-import static io.fabric8.workflow.core.Constants.VOLUME_PREFIX;
 
 public final class KubernetesFacade implements Closeable {
 
     private static final transient Logger LOGGER = Logger.getLogger(KubernetesFacade.class.getName());
+    private static final String VOLUME_FORMAT = "volume-%d";
+    private static final Pattern SPLIT_IN_SPACES = Pattern.compile("([^\"]\\S*|\".+?\")\\s*");
 
     private final Set<Closeable> closeables = new HashSet<>();
     private final KubernetesClient client = new DefaultKubernetesClient();
 
-    public Pod createPod(String hostname, String jobname, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> volumeClaims, String buildWorkspace, List<EnvVar> env, String cmd) {
-        LOGGER.info("Creating pod with name:" + name);
+
+    public Pod createPod(String hostname, String jobname, PodTemplate podTemplate, String buildWorkspace) {
+        LOGGER.info("Creating pod with name:" + podTemplate.getName());
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
 
         int volumeIndex = 1;
         String rootWorkspace = Paths.get(buildWorkspace).getParent().toAbsolutePath().toString();
-        if (hasWorkspaceMount(rootWorkspace, hostPathMounts, emptyDirs, volumeClaims)) {
+        if (hasWorkspaceMount(rootWorkspace, podTemplate.getVolumes())) {
             LOGGER.info("Found volume mount for workspace:[" + buildWorkspace + "].");
-        } else if (hasWorkspaceMount(buildWorkspace, hostPathMounts, emptyDirs, volumeClaims)) {
+        } else if (hasWorkspaceMount(buildWorkspace, podTemplate.getVolumes())) {
             LOGGER.info("Found volume mount for build workspace:[" + buildWorkspace + "].");
         } else {
             // mount jenkins-workspace pvc if available
             String rootPvcName = "jenkins-workspace";
             String buildPvcName = "jenkins-workspace-" + jobname;
+            String volumeName = String.format(VOLUME_FORMAT, volumeIndex);
             if (client.persistentVolumeClaims().withName(buildPvcName).get() != null) {
                 LOGGER.info("Using build pvc: ["+buildPvcName+"] for build workspace:[" + buildWorkspace + "].");
-                volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewPersistentVolumeClaim(buildPvcName, false).build());
-                mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(buildWorkspace).build());
+                volumes.add(new VolumeBuilder().withName(volumeName).withNewPersistentVolumeClaim(buildPvcName, false).build());
+                mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath(buildWorkspace).build());
                 volumeIndex++;
             } else if (client.persistentVolumeClaims().withName(rootPvcName).get() != null) {
                 LOGGER.info("Using workspace pvc: ["+rootPvcName+"] for workspace:[" + rootWorkspace + "].");
-                volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewPersistentVolumeClaim(rootPvcName, false).build());
-                mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(rootWorkspace).build());
+                volumes.add(new VolumeBuilder().withName(volumeName).withNewPersistentVolumeClaim(rootPvcName, false).build());
+                mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath(rootWorkspace).build());
                 volumeIndex++;
             }
             else {
                 LOGGER.warning("No volume mount for workspace. And no pvc named: [jenkins-workspace] found. Falling back to hostPath volumes.");
-                volumes.add(new VolumeBuilder().withName(VOLUME_PREFIX + volumeIndex).withNewHostPath(buildWorkspace).build());
-                mounts.add(new VolumeMountBuilder().withName(VOLUME_PREFIX + volumeIndex).withMountPath(buildWorkspace).build());
+                volumes.add(new VolumeBuilder().withName(volumeName).withNewHostPath(buildWorkspace).build());
+                mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath(buildWorkspace).build());
                 volumeIndex++;
             }
         }
 
-        //Add secrets first
-        for (Map.Entry<String, String> entry : secrets.entrySet()) {
-            String secret = entry.getKey();
-            String mountPath = entry.getValue();
-
-            volumes.add(new VolumeBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withNewSecret().withSecretName(secret).endSecret()
-                    .build());
-            mounts.add(new VolumeMountBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withMountPath(mountPath)
-                    .build());
-
-            volumeIndex++;
-        }
-
-        //Add host paths
-        for (Map.Entry<String, String> entry : hostPathMounts.entrySet()) {
-            String hostPath = entry.getKey();
-            String mountPath = entry.getValue();
-
-            volumes.add(new VolumeBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withNewHostPath(hostPath)
-                    .build());
-            mounts.add(new VolumeMountBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withMountPath(mountPath)
-                    .build());
-            volumeIndex++;
-        }
-
-        //Add empty dirs
-        for (Map.Entry<String, String> entry : emptyDirs.entrySet()) {
-            String mountPath = entry.getKey();
-            String medium = entry.getValue();
-
-            volumes.add(new VolumeBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withNewEmptyDir(medium)
-                    .build());
-
-            mounts.add(new VolumeMountBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withMountPath(mountPath)
-                    .build());
-            volumeIndex++;
-        }
-
-        for (Map.Entry<String, String> entry : volumeClaims.entrySet()) {
-            String mountPath = entry.getKey();
-            String medium = entry.getValue();
-
-            volumes.add(new VolumeBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withNewPersistentVolumeClaim(medium, false)
-                    .build());
-
-            mounts.add(new VolumeMountBuilder()
-                    .withName(VOLUME_PREFIX + volumeIndex)
-                    .withMountPath(mountPath)
-                    .build());
-            volumeIndex++;
+        for (PodVolume volume : podTemplate.getVolumes()) {
+            String volumeName = String.format(VOLUME_FORMAT, volumeIndex);
+            volumes.add(volume.buildVolume(volumeName));
+            mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath(volume.getMountPath()).build());
         }
 
         Node node = getNodeOfPod(hostname);
 
+        List<Container> containers = new ArrayList<>();
+        for (ContainerTemplate c : podTemplate.getContainers()) {
+            List<EnvVar> env = new ArrayList<EnvVar>();
+
+            if (podTemplate.getEnvVars() != null) {
+                for (PodEnvVar podEnvVar : podTemplate.getEnvVars()) {
+                    env.add(new EnvVarBuilder().withName(podEnvVar.getKey()).withValue(podEnvVar.getValue()).build());
+                }
+            }
+
+            if (c.getEnvVars() != null) {
+                for (ContainerEnvVar containerEnvVar : c.getEnvVars()) {
+                    env.add(new EnvVarBuilder().withName(containerEnvVar.getKey()).withValue(containerEnvVar.getValue()).build());
+                }
+            }
+
+            containers.add(new ContainerBuilder()
+                    .withName(c.getName())
+                    .withImage(c.getImage())
+                    .withEnv(env)
+                    .withWorkingDir(buildWorkspace)
+                    .withCommand(split(c.getCommand()))
+                    .withArgs(split(c.getArgs()))
+                    .withTty(c.isTtyEnabled())
+                    .withNewSecurityContext()
+                        .withPrivileged(c.isPrivileged())
+                    .endSecurityContext()
+                    .withVolumeMounts(mounts)
+                    .build()
+            );
+        }
+
         Pod p = client.pods().createNew()
                 .withNewMetadata()
-                .withName(name)
-                .addToLabels("owner", "jenkins")
+                    .withName(podTemplate.getName())
+                    .addToLabels("owner", "jenkins")
                 .endMetadata()
                 .withNewSpec()
-                .withNodeSelector(node != null ? node.getMetadata().getLabels() : new HashMap<String, String>())
-                .withVolumes(volumes)
-                .addNewContainer()
-                .withVolumeMounts(mounts)
-                .withName("podstep")
-                .withImage(image)
-                .withEnv(env)
-                .withWorkingDir(buildWorkspace)
-                .withCommand("/bin/sh", "-c")
-                .withArgs(cmd) // Always get the last part
-                .withTty(true) //It screws up getLog() if tty = true
-                .withNewSecurityContext()
-                    .withPrivileged(privileged)
-                .endSecurityContext()
-                .withVolumeMounts(mounts)
-                .endContainer()
-                .withRestartPolicy("Never")
-                .withServiceAccount(serviceAccount)
-                .endSpec()
+                    .withNodeSelector(node != null ? node.getMetadata().getLabels() : new HashMap<String, String>())
+                    .withVolumes(volumes)
+                    .withContainers(containers)
+                    .withRestartPolicy("Never")
+                    .withServiceAccount(podTemplate.getServiceAccount())
+                    .endSpec()
                 .done();
         return p;
     }
@@ -248,15 +220,14 @@ public final class KubernetesFacade implements Closeable {
                 .writingError(out)
                 .withTTY()
                 .usingListener(new ExecListener() {
-
                     @Override
-                    public void onOpen(okhttp3.Response response) {
+                    public void onOpen(Response response) {
                         alive.set(true);
                         started.countDown();
                     }
 
                     @Override
-                    public void onFailure(IOException e, okhttp3.Response response) {
+                    public void onFailure(IOException e, Response response) {
                         alive.set(false);
                         e.printStackTrace(out);
                         started.countDown();
@@ -327,16 +298,28 @@ public final class KubernetesFacade implements Closeable {
         }
     }
 
-    public static boolean hasWorkspaceMount(String workspace, Map<String, String> ...mounts) {
-        for (Map<String, String> mount : mounts) {
-            for (String key : mount.keySet()) {
-                if (key.equals(workspace)) {
+    private static List<String> split(String str) {
+        if (str == null || str.isEmpty()) {
+            return null;
+        }
+        // handle quoted arguments
+        Matcher m = SPLIT_IN_SPACES.matcher(str);
+        List<String> commands = new ArrayList<String>();
+        while (m.find()) {
+            commands.add(m.group(1).replace("\"", ""));
+        }
+        return commands;
+    }
+
+    public static boolean hasWorkspaceMount(String workspace, List<PodVolume> volumes) {
+            for (PodVolume volume : volumes) {
+                if (volume.getMountPath().equals(workspace)) {
                     return true;
                 }
             }
-        }
         return false;
     }
+
 
     public static final boolean isPodRunning(Pod pod) {
         return pod != null && pod.getStatus() != null && RUNNING_PHASE.equals(pod.getStatus().getPhase());

@@ -16,14 +16,22 @@
 
 package io.fabric8.kubernetes.pipeline;
 
+import com.google.common.base.Strings;
+
 import hudson.Extension;
+
+import org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate;
+import org.csanchez.jenkins.plugins.kubernetes.PodEnvVar;
+import org.csanchez.jenkins.plugins.kubernetes.volumes.PodVolume;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class WithPodStep extends AbstractStepImpl implements Serializable {
@@ -31,62 +39,61 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
     private static final long serialVersionUID = 5588861066775717487L;
 
     private final String name;
-    private final String image;
+
+    private final List<ContainerTemplate> containers;
+    private final transient List<PodEnvVar> envVars;
+    private final List<PodVolume> volumes;
+
     private final String serviceAccount;
-    private final Boolean privileged;
-    private final Map secrets;
-    private final Map hostPathMounts;
-    private final Map emptyDirs;
-    private final Map volumeClaims;
-    private final Map env;
+    private final String nodeSelector;
+    private final String workingDir;
 
     @DataBoundConstructor
-    public WithPodStep(String name, String image, String serviceAccount, Boolean privileged, Map secrets, Map hostPathMounts, Map emptyDirs, Map volumeClaims, Map env) {
+    public WithPodStep(String name, List<ContainerTemplate> containers, Map<String, String> envVars, List<PodVolume> volumes, String serviceAccount, String nodeSelector, String workingDir) {
         this.name = name;
-        this.image = image;
+        this.containers = containers != null ? containers : Collections.emptyList();
+        this.envVars = envVars != null ? asPodEnvars(envVars) : Collections.emptyList();
+        this.volumes = volumes != null ? volumes : Collections.emptyList();
         this.serviceAccount = serviceAccount;
-        this.privileged = privileged;
-        this.secrets = secrets != null ? secrets : new HashMap();
-        this.hostPathMounts = hostPathMounts != null ? hostPathMounts : new HashMap();
-        this.emptyDirs = emptyDirs != null ? emptyDirs : new HashMap();
-        this.volumeClaims = volumeClaims != null ? volumeClaims : new HashMap();
-        this.env = env != null ? env : new HashMap();
+        this.nodeSelector = nodeSelector;
+        this.workingDir = Strings.isNullOrEmpty(workingDir) ? ContainerTemplate.DEFAULT_WORKING_DIR : workingDir;
     }
 
     public String getName() {
         return name;
     }
 
-    public String getImage() {
-        return image;
+    public List<ContainerTemplate> getContainers() {
+        return containers;
+    }
+
+    public List<PodEnvVar> getEnvVars() {
+        return envVars;
+    }
+
+    public List<PodVolume> getVolumes() {
+        return volumes;
     }
 
     public String getServiceAccount() {
         return serviceAccount;
     }
 
-    public Boolean getPrivileged() {
-        return privileged;
+    public String getNodeSelector() {
+        return nodeSelector;
     }
 
-    public Map getSecrets() {
-        return secrets;
+    public String getWorkingDir() {
+        return workingDir;
     }
 
-    public Map getHostPathMounts() {
-        return hostPathMounts;
-    }
 
-    public Map getEmptyDirs() {
-        return emptyDirs;
-    }
-
-    public Map getVolumeClaims() {
-        return volumeClaims;
-    }
-
-    public Map getEnv() {
-        return env;
+    private List<PodEnvVar> asPodEnvars(Map<String, String> map) {
+        List<PodEnvVar> result = new ArrayList<>();
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            result.add(new PodEnvVar(entry.getKey(), entry.getValue()));
+        }
+        return result;
     }
 
     @Extension
@@ -107,7 +114,7 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
 
         @Override
         public String getDisplayName() {
-            return "Run build steps in a Pod";
+            return "Run build steps in a MyPod";
         }
 
         @Override

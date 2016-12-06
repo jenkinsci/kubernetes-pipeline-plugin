@@ -18,8 +18,12 @@ package io.fabric8.kubernetes.pipeline;
 
 import groovy.lang.Binding;
 import hudson.Extension;
+import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.workflow.core.ClassWhiteList;
 import org.codehaus.groovy.runtime.ScriptBytecodeAdapter;
+import org.csanchez.jenkins.plugins.kubernetes.ContainerEnvVar;
+import org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate;
+import org.csanchez.jenkins.plugins.kubernetes.PodEnvVar;
 import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 
@@ -63,6 +67,7 @@ public class KubernetesDSL extends GlobalVariable {
     public static class PlugiWhiteList extends ClassWhiteList {
         public PlugiWhiteList() throws IOException {
             super(ScriptBytecodeAdapter.class,
+                    PodTemplate.class, ContainerTemplate.class, PodEnvVar.class, ContainerEnvVar.class,
                     ArrayList.class, Collection.class, HashMap.class, HashSet.class, Collections.class,
                     Callable.class);
         }

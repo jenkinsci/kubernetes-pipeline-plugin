@@ -16,6 +16,16 @@
 
 package io.fabric8.kubernetes.pipeline
 
+import com.cloudbees.groovy.cps.NonCPS
+import org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate
+import org.csanchez.jenkins.plugins.kubernetes.PodEnvVar
+import org.csanchez.jenkins.plugins.kubernetes.volumes.ConfigMapVolume
+import org.csanchez.jenkins.plugins.kubernetes.volumes.EmptyDirVolume
+import org.csanchez.jenkins.plugins.kubernetes.volumes.HostPathVolume
+import org.csanchez.jenkins.plugins.kubernetes.volumes.NfsVolume
+import org.csanchez.jenkins.plugins.kubernetes.volumes.PodVolume
+import org.csanchez.jenkins.plugins.kubernetes.volumes.SecretVolume
+
 class Kubernetes implements Serializable {
 
     private org.jenkinsci.plugins.workflow.cps.CpsScript script
@@ -27,19 +37,10 @@ class Kubernetes implements Serializable {
         this.image = new Image(this)
     }
 
-    private <V> V node(Closure<V> body) {
-        if (script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
-            // Already inside a node block.
-            body()
-        } else {
-            script.node {
-                body()
-            }
-        }
-    }
-
-    public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", Boolean privileged = false, Map<String, String> secrets = new HashMap(), Map<String, String> hostPaths = new HashMap(), Map<String, String> emptyDirs = new HashMap<>(), Map<String, String> volumeClaims = new HashMap<>(), Map<String, String> env = new HashMap<>()) {
-        return new Pod(this, name, image, serviceAccount, privileged, secrets, hostPaths, emptyDirs, volumeClaims, env)
+    public Pod pod(String name = "jenkins-pod", String image = "", String serviceAccount = "", String workingDir = "/home/jenkins/workspace") {
+        Pod pod = new Pod(this)
+        pod.name = name
+        return pod
     }
 
     public Image image() {
@@ -51,86 +52,285 @@ class Kubernetes implements Serializable {
     }
 
     public static class Pod implements Serializable {
-        private final Kubernetes kubernetes
-        private final String name
-        private final String image
-        private final String serviceAccount
-        private final Boolean privileged
-        private final Map secrets
-        private final Map hostPathMounts
-        private final Map emptyDirs
-        private final Map volumeClaims
-        private final Map env
 
-        Pod(Kubernetes kubernetes, String name, String image, String serviceAccount, Boolean privileged, Map<String, String> secrets, Map<String, String> hostPathMounts, Map<String, String> emptyDirs, Map<String, String> volumeClaims, Map<String, String> env) {
+        private final Kubernetes kubernetes
+        private String name;
+
+        private List<ContainerTemplate> containers = new ArrayList<>()
+        private Map<String, String> envVars = new HashMap<>()
+        private List<PodVolume> volumes = new ArrayList<>()
+
+        private String serviceAccount;
+        private String nodeSelector;
+        private String workingDir = "/home/jenkins";
+
+        Pod(Kubernetes kubernetes) {
             this.kubernetes = kubernetes
-            this.name = name
-            this.image = image
-            this.serviceAccount = serviceAccount
-            this.privileged = privileged
-            this.secrets = secrets
-            this.hostPathMounts = hostPathMounts
-            this.emptyDirs = emptyDirs
-            this.volumeClaims = volumeClaims
-            this.env = env
         }
 
         public Pod withName(String name) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, volumeClaims, env)
+            return new Pod(kubernetes, name, containers, envVars, volumes, serviceAccount, nodeSelector, workingDir);
         }
 
-        public Pod withImage(String image) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, volumeClaims, env)
+        @NonCPS
+        public Container withNewContainer() {
+            return new Container(this);
         }
+
+
+        @NonCPS
+        private Container getFirstContainer() {
+            if  (containers == null || containers.isEmpty()) {
+                return this.withNewContainer()
+            } else {
+                return new Container(this, containers.remove(0))
+            }
+        }
+
+        @NonCPS
+        public Pod withImage(String image) {
+            return getFirstContainer().withImage(image).done()
+        }
+
+        public Pod withEnvar(String key, String value) {
+            this.envVars.put(key, value)
+            return this
+        }
+
+        public Pod withSecret(String mountPath, String secretName) {
+            volumes.add(new SecretVolume(mountPath, secretName))
+            return this
+        }
+
+        public Pod withConfigMap(String mountPath, String configMapName) {
+            volumes.add(new ConfigMapVolume(mountPath, configMapName))
+            return this
+        }
+
+        public Pod withHostPath(String mountPath, String hostPath) {
+            volumes.add(new HostPathVolume(hostPath, mountPath))
+            return this
+        }
+
+        public Pod withNfs(String mountPath, String serverAddress, String serverPath, Boolean readOnly) {
+            volumes.add(new NfsVolume(serviceAccount, serverPath, readOnly, mountPath))
+            return this
+        }
+
+        public Pod withEmptyDir(String mountPath, Boolean memory) {
+            volumes.add(new EmptyDirVolume(mountPath, memory))
+            return this
+        }
+
 
         public Pod withServiceAccount(String serviceAccount) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, volumeClaims, env)
+            this.serviceAccount = serviceAccount;
+            return this
         }
 
-        public Pod withPrivileged(Boolean privileged) {
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, volumeClaims, env)
+        public Pod nodeSelector(String nodeSelector) {
+            this.nodeSelector = nodeSelector
+            return this
         }
 
-        public Pod withSecret(String secretName, String mountPath) {
-            Map<String, String> newSecrets = new HashMap<>(secrets)
-            newSecrets.put(secretName, mountPath)
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, newSecrets, hostPathMounts, emptyDirs, volumeClaims, env)
+        public Pod workingDir(String workingDir) {
+            this.workingDir = workingDir;
+            return this;
         }
 
-        public Pod withHostPathMount(String hostPath, String mountPath) {
-            Map<String, String> newHostPathMounts = new HashMap<>(hostPathMounts)
-            newHostPathMounts.put(hostPath, mountPath)
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, newHostPathMounts, emptyDirs, volumeClaims, env)
-        }
 
-        public Pod withEmptyDir(String mountPath) {
-            return withEmptyDir(mountPath, null)
-        }
-
-        public Pod withEmptyDir(String mountPath, String medium) {
-            Map<String, String> newEmptyDirs = new HashMap<>(emptyDirs)
-            newEmptyDirs.put(mountPath, medium)
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, newEmptyDirs, volumeClaims, env)
-        }
-
-        public Pod withVolumeClaim(String mountPath, String claimName) {
-            Map<String, String> newVolumeClaims = new HashMap<>(emptyDirs)
-            newVolumeClaims.put(mountPath, claimName)
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, newVolumeClaims, env)
-        }
-
-        public Pod withEnvVar(String key, String value) {
-            Map<String, String> newEnv = new HashMap<>(env)
-            newEnv.put(key, value)
-            return new Pod(kubernetes, name, image, serviceAccount, privileged, secrets, hostPathMounts, emptyDirs, volumeClaims, newEnv)
-        }
-
-        public <V> V inside(Closure<V> body) {
-            kubernetes.node {
-                kubernetes.script.withPod(name: name, image: image, serviceAccount: serviceAccount, privileged: privileged, secrets: secrets, hostPathMounts: hostPathMounts, emptyDirs: emptyDirs, volumeClaims: volumeClaims, env: env) {
+        public <V> V inside(def container = "", Closure<V> body) {
+            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
+                // Already inside a node block.
+                kubernetes.script.withPod(name: name, containers: containers, envVars: envVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, workingDir: workingDir) {
                     body()
                 }
+            } else {
+                def label = "buildpod.${kubernetes.script.env.JOB_NAME}.${kubernetes.script.env.BUILD_NUMBER}".replace('-', '_').replace('/', '_')
+                List<PodEnvVar> podEnvVars = new ArrayList<>();
+                for (Map.Entry<String, String> entry : envVars.entrySet()) {
+                    podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()));
+                }
+                kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector) {
+                    kubernetes.script.node(label) {
+                        if (container != null && container.isEmpty()) {
+                            kubernetes.script.container(name: container) {
+                                body()
+                            }
+                        } else if (containers.size() == 1) {
+                            String name = containers.get(0).name;
+                            kubernetes.script.container(name: name) {
+                                body()
+                            }
+                        } else {
+                            body()
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    public static class Container implements Serializable {
+        private transient Pod pod;
+        private String name = "buildcnt";
+        private String image;
+        private Boolean privileged;
+        private Boolean alwaysPullImage;
+        private String workingDir = "/home/jenkins";
+        private String command = "/bin/sh -c";
+        private String args = "cat";
+        private Boolean ttyEnabled = true;
+        private String resourceRequestCpu;
+        private String resourceRequestMemory;
+        private String resourceLimitCpu;
+        private String resourceLimitMemory;
+        private transient Map<String, String> envVars = new HashMap<>()
+
+        public Container (Pod pod) {
+            this.pod = pod
+        }
+
+        public Container (Pod pod, ContainerTemplate c) {
+            this(pod, c.name, c.image, c.alwaysPullImage, c.workingDir, c.command, c.args,
+                    c.ttyEnabled, c.resourceRequestCpu, c.resourceRequestMemory,
+                    c.resourceLimitCpu, c.resourceLimitMemory, c.envVars)
+        }
+
+        public Container(Pod pod, String name, String image, Boolean alwaysPullImage, Boolean privileged, String workingDir, String command, String args, Boolean ttyEnabled, String resourceRequestCpu, String resourceRequestMemory, String resourceLimitCpu, String resourceLimitMemory, Map<String, String> envVars) {
+            this.pod = pod;
+            this.name = name;
+            this.image = image;
+            this.privileged = privileged;
+            this.alwaysPullImage = alwaysPullImage;
+            this.workingDir = workingDir;
+            this.command = command;
+            this.args = args;
+            this.ttyEnabled = ttyEnabled;
+            this.resourceRequestCpu = resourceRequestCpu;
+            this.resourceRequestMemory = resourceRequestMemory;
+            this.resourceLimitCpu = resourceLimitCpu;
+            this.resourceLimitMemory = resourceLimitMemory;
+            this.envVars = envVars;
+        }
+
+        @NonCPS
+        public Container withName(String name) {
+            this.name = name
+            return this
+        }
+
+        @NonCPS
+        public Container withImage(String image) {
+            this.image = image
+            return this
+        }
+
+        @NonCPS
+        public Container withPrivileged(Boolean privileged) {
+            this.privileged = privileged
+            return this
+        }
+
+        @NonCPS
+        public Container withAlwaysPullImage(Boolean alwaysPullImage) {
+            this.alwaysPullImage = alwaysPullImage
+            return this
+        }
+
+        @NonCPS
+        public Container withWorkingDir(String workingDir) {
+            this.workingDir = workingDir
+            return this
+        }
+
+        @NonCPS
+        public Container withCommand(String command) {
+            this.command = command
+            return this
+        }
+
+        @NonCPS
+        public Container withArgs(String args) {
+            this.args = args
+            return this
+        }
+
+        @NonCPS
+        public Container withTtyEnabled(Boolean ttyEnabled) {
+            this.ttyEnabled = ttyEnabled
+            return this
+        }
+
+        @NonCPS
+        public Container withResourceRequestCpu(String resourceRequestCpu) {
+            this.resourceRequestCpu
+            return this
+        }
+
+        @NonCPS
+        public Container withResourceRequestMemory(String resourceRequestMemory) {
+            this.resourceLimitMemory
+            return this
+        }
+
+        @NonCPS
+        public Container withResourceLimitCpu(String resourceLimitCpu) {
+            this.resourceLimitCpu = resourceLimitMemory
+            return this
+
+        }
+
+        @NonCPS
+        public Container withResourceLimitMemory(String resourceLimitMemory) {
+            this.resourceLimitMemory = resourceLimitMemory
+            return this
+        }
+
+        @NonCPS
+        public Container withEnvar(String key, String value) {
+            this.envVars.put(key, value)
+            return this
+        }
+
+        @NonCPS
+        private ContainerTemplate asTemplate() {
+            List<PodEnvVar> podEnvVars = new ArrayList<>();
+            for (Map.Entry<String, String> entry : envVars.entrySet()) {
+                podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()));
+            }
+
+            ContainerTemplate template  = new ContainerTemplate(name, image);
+            template.setAlwaysPullImage(alwaysPullImage)
+            template.setCommand(command)
+            template.setArgs(args)
+            template.setTtyEnabled(ttyEnabled)
+            template.setEnvVars(podEnvVars)
+            template.setPrivileged(privileged)
+            template.setResourceRequestCpu(resourceRequestCpu)
+            template.setResourceRequestMemory(resourceRequestMemory)
+            template.setResourceLimitCpu(resourceLimitCpu)
+            template.setResourceLimitMemory(resourceRequestMemory)
+            return template;
+        }
+
+
+        @NonCPS
+        public Pod done() {
+            pod.containers.add(asTemplate())
+            return pod
+        }
+
+        //Just added for the shake of readability
+        @NonCPS
+        public Pod and() {
+            pod.containers.add(asTemplate())
+            return pod
+        }
+
+        @NonCPS
+        public <V> V inside(Closure<V> body) {
+            return done().inside(container: name, body)
         }
     }
 
