@@ -16,20 +16,13 @@
 
 package io.fabric8.kubernetes.pipeline;
 
-import hudson.EnvVars;
-import hudson.FilePath;
-import hudson.LauncherDecorator;
-import hudson.model.Computer;
-import hudson.model.TaskListener;
-import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.workflow.core.Constants;
+import org.csanchez.jenkins.plugins.kubernetes.PodTemplate;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.BodyInvoker;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +31,16 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+
+import javax.inject.Inject;
+
+import hudson.EnvVars;
+import hudson.FilePath;
+import hudson.LauncherDecorator;
+import hudson.model.Computer;
+import hudson.model.TaskListener;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.workflow.core.Constants;
 
 public class WithPodStepExecution extends AbstractStepExecutionImpl {
 
@@ -62,17 +65,19 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
         //The body is executed async. so we can't use try with resource here.
         final KubernetesFacade kubernetes = new KubernetesFacade();
 
+        PodTemplate newTemplate = new PodTemplate();
+        newTemplate.setName(podName);
+        newTemplate.setLabel(step.getName());
+        newTemplate.setVolumes(step.getVolumes());
+        newTemplate.setContainers(step.getContainers());
+        newTemplate.setNodeSelector(step.getNodeSelector());
+        newTemplate.setServiceAccount(step.getServiceAccount());
+
         //Get host using env vars and fallback to computer name (integration point with kubernetes-plugin).
         String hostname = env.get(Constants.HOSTNAME, computer.getName());
         String jobname = env.get(Constants.JOB_NAME, computer.getName());
-        kubernetes.createPod(hostname, jobname,  podName, step.getImage(), step.getServiceAccount(), step.getPrivileged(),
-                step.getSecrets(),
-                step.getHostPathMounts(),
-                step.getEmptyDirs(),
-                step.getVolumeClaims(),
-                workspace.getRemote(),
-                createPodEnv((step.getEnv())
-                ), "cat");
+
+        kubernetes.createPod(hostname, jobname, newTemplate, workspace.getRemote());
         kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 
@@ -119,7 +124,6 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            listener.getLogger().println("SUCCESS CALLBACK");
             try (KubernetesFacade kubernetes = new KubernetesFacade()){
                 kubernetes.deletePod(podName);
             } catch (IOException e) {
@@ -131,7 +135,6 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            listener.getLogger().println("FAILURE CALLBACK");
             try (KubernetesFacade kubernetes = new KubernetesFacade()){
                 kubernetes.deletePod(podName);
             } catch (IOException e) {

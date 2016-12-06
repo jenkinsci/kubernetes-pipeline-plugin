@@ -1,14 +1,44 @@
 Kubernetes Steps
 ----------------
 
+This plugin provides pipeline steps useful for working with kubernetes:
+
+- [Working with Kubernetes Pods](#working-with-kubernetes-pods)
+- [Working with Docker Images](#working-with-docker-images)
+ 
 ## Working with Kubernetes Pods
+
+Quite often a build needs to run some steps using specific tools and environment configuration. 
+In kubernetes this translates to a container that uses a specific image *(that provides the tools)*, has access to volume mounts (persistent volumes, secrets, configmaps).
+
+This plugin provides pipeline steps, that allow you to create a pod and run custom shell steps inside a container.
+
+The overall syntax looks like this:
+
+    kubernetes.pod('buildpod')
+        .withNewContainer().withName(<name1>).withImage(<image1>)
+                           .withEnv(<key1>,<value1>)
+                           .withSecret(<mount path>, <secret name>)
+                           .and()
+        .withNewContainer().withName(<name2>).withImage(<image2>).inside {                       
+            sh '<some shell commands that are going to be run inside name2>'
+    } 
+
+The are are a lot of shortcuts that make the syntax less verbose, and sugar that makes it read better. Most of the options are explained below.
+It's even possible to skip the DSL completely and just use the steps directly or with the help of the script builder.
+
+When a snippet like the above is wrapped inside a `node` it will just create the build pod and run the specified shell commands inside it.
+If there is no `none` it will delegate to [kubernetes plugin](#https://github.com/jenkinsci/kubernetes-plugin) and create a kubernetes slave pod, that will additionally 
+contain the specified container.    
 
 ### Using a maven kubernetes pod
 
-    kubernetes.pod('buildpod').withImage('maven').inside {      
-        git 'https://github.com/fabric8io/kubernetes-pipeline.git'
+    kubernetes.pod('buildpod').withImage('maven').inside {  
+        //for a single container you can avoid the .withNewContainer() thing.    
+        git 'https://github.com/jenkinsci/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }    
+   
     
 ### Using environment variables
 
