@@ -77,7 +77,7 @@
         <git-client.version>1.19.2</git-client.version>
         <httpcore.version>4.4</httpcore.version>
         <jackson-databind.version>2.6.3</jackson-databind.version>
-        <kubernetes-client.version>1.4.14</kubernetes-client.version>
+        <kubernetes-client.version>1.4.27</kubernetes-client.version>
         <maven-hpi-plugin.version>1.112</maven-hpi-plugin.version>
         <restassured.version>1.7.2</restassured.version>
 
@@ -89,7 +89,7 @@
         <jenkins-durable-task-step.version>2.4</jenkins-durable-task-step.version>
         <jenkins-git.version>2.4.1</jenkins-git.version>
         <jenkins-git-client.version>1.19.2</jenkins-git-client.version>
-        <jenkins-kubernetes-plugin.version>0.9</jenkins-kubernetes-plugin.version>
+        <jenkins-kubernetes-plugin.version>0.10-SNAPSHOT</jenkins-kubernetes-plugin.version>
         <jenkins-mailer.version>1.16</jenkins-mailer.version>
         <jenkins-pipeline-stage-step.version>2.2</jenkins-pipeline-stage-step.version>
         <jenkins-script-security.version>1.14</jenkins-script-security.version>
