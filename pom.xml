@@ -73,7 +73,7 @@
 
         <docker-client.version>1.2.0</docker-client.version>
         <es.version>2.1.1</es.version>
-        <fabric8.version>2.2.183</fabric8.version>
+        <fabric8.version>2.2.188</fabric8.version>
         <git-client.version>1.19.2</git-client.version>
         <httpcore.version>4.4</httpcore.version>
         <jackson-databind.version>2.6.3</jackson-databind.version>
