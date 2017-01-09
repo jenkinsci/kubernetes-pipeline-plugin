@@ -5,7 +5,7 @@ DevOps Steps
 
 You can apply Kubernetes resources in order to create and update pods, services, replication controllers, lists and openshift templates.  When running on openshift it will also create routes so that services are exposed.
 
-Apply changes by passing the JSON formatted resource and the required environment.  If the enlvironment does not exist then a new namespace is created with the environment name.
+Apply changes by passing the JSON formatted resource and the required environment.  If the environment does not exist then a new namespace is created with the environment name.
 
 The KubernetesApply step will enrich Pod or Replication Controller manifests, adding the platform default docker registry if no `registry` parameter set.
 
