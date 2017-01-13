@@ -38,6 +38,7 @@ import io.fabric8.kubernetes.pipeline.devops.elasticsearch.DeploymentEventDTO;
 import io.fabric8.kubernetes.pipeline.devops.elasticsearch.ElasticsearchClient;
 import io.fabric8.kubernetes.pipeline.devops.git.GitInfoCallback;
 import io.fabric8.openshift.api.model.*;
+import io.fabric8.openshift.client.DefaultOpenShiftClient;
 import io.fabric8.openshift.client.OpenShiftClient;
 import io.fabric8.utils.Strings;
 import io.fabric8.utils.Systems;
@@ -231,9 +232,17 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         return StringUtils.capitalize(answer);
     }
 
+    private boolean isOpenShift() {
+        return new DefaultOpenShiftClient().isAdaptable(OpenShiftClient.class);
+    }
+
     private String getRegistry() {
         if (Strings.isNullOrBlank(step.getRegistry())) {
-            if (Strings.isNotBlank(env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST))){
+            if (isOpenShift()){
+                if (Strings.isNotBlank(env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST))){
+                    return env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_PORT);
+                }
+            } else if (Strings.isNotBlank(env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST))) {
                 return env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_PORT);
             }
             return null;
