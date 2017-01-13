@@ -242,10 +242,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                 if (Strings.isNotBlank(env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST))){
                     return env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_PORT);
                 }
-            } else {
-                if (Strings.isNotBlank(env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST))){
-                    return env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_PORT);
-                }
+            } else if (Strings.isNotBlank(env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST))) {
+                return env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.FABRIC8_DOCKER_REGISTRY_SERVICE_PORT);
             }
             return null;
         } else {
