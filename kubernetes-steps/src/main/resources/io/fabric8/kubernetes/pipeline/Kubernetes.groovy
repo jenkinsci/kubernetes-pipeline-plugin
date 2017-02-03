@@ -17,6 +17,7 @@
 package io.fabric8.kubernetes.pipeline
 
 import com.cloudbees.groovy.cps.NonCPS
+import org.csanchez.jenkins.plugins.kubernetes.ContainerEnvVar
 import org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate
 import org.csanchez.jenkins.plugins.kubernetes.PodEnvVar
 import org.csanchez.jenkins.plugins.kubernetes.volumes.ConfigMapVolume
@@ -175,8 +176,8 @@ class Kubernetes implements Serializable {
         private transient Pod pod;
         private String name = "buildcnt";
         private String image;
-        private Boolean privileged;
-        private Boolean alwaysPullImage;
+        private Boolean privileged = false;
+        private Boolean alwaysPullImage = false;
         private String workingDir = "/home/jenkins";
         private String command = "/bin/sh -c";
         private String args = "cat";
@@ -295,9 +296,9 @@ class Kubernetes implements Serializable {
 
         @NonCPS
         private ContainerTemplate asTemplate() {
-            List<PodEnvVar> podEnvVars = new ArrayList<>();
+            def containerEnvVars = new ArrayList<>();
             for (Map.Entry<String, String> entry : envVars.entrySet()) {
-                podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()));
+                containerEnvVars.add(new ContainerEnvVar(entry.getKey(), entry.getValue()));
             }
 
             ContainerTemplate template  = new ContainerTemplate(name, image);
@@ -305,7 +306,7 @@ class Kubernetes implements Serializable {
             template.setCommand(command)
             template.setArgs(args)
             template.setTtyEnabled(ttyEnabled)
-            template.setEnvVars(podEnvVars)
+            template.setEnvVars(containerEnvVars)
             template.setPrivileged(privileged)
             template.setResourceRequestCpu(resourceRequestCpu)
             template.setResourceRequestMemory(resourceRequestMemory)
