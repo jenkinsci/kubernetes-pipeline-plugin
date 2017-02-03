@@ -16,9 +16,11 @@ This plugin provides pipeline steps, that allow you to create a pod and run cust
 The overall syntax looks like this:
 
     kubernetes.pod('buildpod')
+        .withSerivceAccount(<serivce accoutn>)
+        .withSecret(<mount path>, <secret name>)
+        .withEnvar(<gloabal key1>, <value1>)
         .withNewContainer().withName(<name1>).withImage(<image1>)
-                           .withEnv(<key1>,<value1>)
-                           .withSecret(<mount path>, <secret name>)
+                           .withEnv(<key1>,<value1>)                                                       
                            .and()
         .withNewContainer().withName(<name2>).withImage(<image2>).inside {                       
             sh '<some shell commands that are going to be run inside name2>'
@@ -42,7 +44,7 @@ contain the specified container.
     
 ### Using environment variables
 
-    kubernetes.pod('buildpod').withImage('maven').withEnvVar('DOCKER_CONFIG','/home/jenkins/.docker/').inside {      
+    kubernetes.pod('buildpod').withImage('maven').withEnvar('DOCKER_CONFIG','/home/jenkins/.docker/').inside {      
         git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }    
@@ -86,7 +88,7 @@ This also supports specifying the medium (e.g. "Memory")
     
 #### Using volume claim mounts
     
-    kubernetes.pod('buildpod').withImage('maven').withVolumeClaimMount('/path/on/container', 'volume-claim-name').inside {      
+    kubernetes.pod('buildpod').withImage('maven').withVolumeClaim('/path/on/container', 'volume-claim-name').inside {      
         git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }  

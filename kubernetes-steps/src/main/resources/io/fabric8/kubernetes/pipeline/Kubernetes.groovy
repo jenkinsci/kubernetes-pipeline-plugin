@@ -24,6 +24,7 @@ import org.csanchez.jenkins.plugins.kubernetes.volumes.ConfigMapVolume
 import org.csanchez.jenkins.plugins.kubernetes.volumes.EmptyDirVolume
 import org.csanchez.jenkins.plugins.kubernetes.volumes.HostPathVolume
 import org.csanchez.jenkins.plugins.kubernetes.volumes.NfsVolume
+import org.csanchez.jenkins.plugins.kubernetes.volumes.PersistentVolumeClaim
 import org.csanchez.jenkins.plugins.kubernetes.volumes.PodVolume
 import org.csanchez.jenkins.plugins.kubernetes.volumes.SecretVolume
 
@@ -110,6 +111,11 @@ class Kubernetes implements Serializable {
 
         public Pod withHostPath(String mountPath, String hostPath) {
             volumes.add(new HostPathVolume(hostPath, mountPath))
+            return this
+        }
+
+        public Pod withVolumeClaim(String mountPath, String claimName, Boolean readOnly) {
+            volumes.add(new PersistentVolumeClaim(mountPath, claimName, readOnly))
             return this
         }
 
