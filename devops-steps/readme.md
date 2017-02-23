@@ -23,6 +23,11 @@ The KubernetesApply step will enrich Pod or Replication Controller manifests, ad
 
 __NOTE__ By default [DeploymentEvent](https://github.com/fabric8io/kubernetes-pipeline/blob/master/src/main/java/io/fabric8/kubernetes/workflow/elasticsearch/DeploymentEvent.java) are sent to elasticsearch (if running in the same namespace) when a pod or replication controller is deployed.
 
+### Waiting for resources to become ready
+
+When applying the kubernetes configuration, you have the option to wait until they become ready.
+You can set the option `readinessTimeout` that specifies the amount of milliseconds we should wait until everything is in ready state (this applies only to resources that makes sense, e.g. Pods, ReplicaSets, ReplicationControllers, Deployments, DeploymentConfigs etc).
+If `readinessTimeout` is set to a positive value, then `kubernetesApply` will wait until the resource are ready or the specified amount of time has elapsed. In the later case an Exception will be thrown.  
 
 ## Working with Elasticsearch
 

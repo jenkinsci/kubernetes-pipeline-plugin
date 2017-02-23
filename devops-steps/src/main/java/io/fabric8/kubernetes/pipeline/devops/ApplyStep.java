@@ -28,6 +28,8 @@ public class ApplyStep extends AbstractStepImpl {
     private final String environment;
     private final String registry;
     private final String environmentName;
+    private final Long readinessTimeout;
+
     private Boolean createNewResources = true;
     private Boolean servicesOnly = false;
     private Boolean ignoreServices = false;
@@ -37,12 +39,14 @@ public class ApplyStep extends AbstractStepImpl {
     private Boolean rollingUpgrades = true;
     private Boolean rollingUpgradePreserveScale = true;
 
+
     @DataBoundConstructor
-    public ApplyStep(String file, String environment, String environmentName, String registry, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale){
+    public ApplyStep(String file, String environment, String environmentName, String registry, Long readinessTimeout, Boolean createNewResources, Boolean servicesOnly, Boolean ignoreServices, Boolean ignoreRunningOAuthClients, Boolean processTemplatesLocally, Boolean deletePodsOnReplicationControllerUpdate, Boolean rollingUpgrades, Boolean rollingUpgradePreserveScale){
         this.file = file;
         this.environment = environment;
         this.environmentName = environmentName;
         this.registry = registry;
+        if (readinessTimeout != null) this.readinessTimeout = readinessTimeout; else this.readinessTimeout = 0L;
         if (createNewResources != null) this.createNewResources = createNewResources;
         if (servicesOnly != null) this.servicesOnly = servicesOnly;
         if (ignoreServices != null) this.ignoreServices = ignoreServices;
@@ -51,7 +55,6 @@ public class ApplyStep extends AbstractStepImpl {
         if (deletePodsOnReplicationControllerUpdate != null) this.deletePodsOnReplicationControllerUpdate = deletePodsOnReplicationControllerUpdate;
         if (rollingUpgrades != null) this.rollingUpgrades = rollingUpgrades;
         if (createNewResources != null) this.rollingUpgradePreserveScale = rollingUpgradePreserveScale;
-
     }
 
     public String getFile() {
@@ -67,6 +70,10 @@ public class ApplyStep extends AbstractStepImpl {
     }
 
     public String getRegistry() { return registry; }
+
+    public Long getReadinessTimeout() {
+        return readinessTimeout;
+    }
 
     public Boolean getCreateNewResources() {
         return createNewResources;
