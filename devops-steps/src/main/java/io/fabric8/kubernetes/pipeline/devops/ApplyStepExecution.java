@@ -117,8 +117,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             if (dto == null) {
                 throw new AbortException("Cannot load kubernetes json: " + resources);
             }
-            // lets check we have created the namespace
-            controller.applyNamespace(environment);
+
+            createEnvironment(environment, controller);
             controller.setNamespace(environment);
 
             // TODO do we need this?
@@ -189,6 +189,29 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             throw new AbortException("Error during kubernetes apply: " + stacktrace);
         }
         return "OK";
+    }
+
+    private void createEnvironment(String environment, Controller controller) throws Exception {
+        boolean found = false;
+        if (isOpenShift()) {
+            OpenShiftClient oClient = new DefaultOpenShiftClient();
+
+            ProjectList ps = oClient.projects().list();
+            for(Project p : ps.getItems()){
+                listener.getLogger().println("Found namespace " +p.getMetadata().getName());
+                if (environment.equalsIgnoreCase(p.getMetadata().getName())){
+                    found = true;
+                    listener.getLogger().println("Found existing environment " + environment);
+                    break;
+                }
+            }
+        } else {
+            throw new Exception("Adapting to OpenShiftClient not support. Check if adapter is present, and that env provides /oapi root path.");
+        }
+        if (!found){
+            listener.getLogger().println("Creating environment " + environment);
+            controller.applyNamespace(environment);
+        }
     }
 
     private String getResources() throws AbortException {
@@ -559,4 +582,3 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         return kubernetes;
     }
 }
-
