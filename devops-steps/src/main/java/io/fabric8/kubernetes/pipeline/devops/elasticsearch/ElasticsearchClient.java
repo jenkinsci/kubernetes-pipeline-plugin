@@ -136,10 +136,9 @@ public class ElasticsearchClient {
 
    public static boolean isUrlReachable(String url) {
         int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT", "1000")); // default to 1 second
-        final boolean followRedirectsOriginalValue = HttpURLConnection.getFollowRedirects();
         try {
-            HttpURLConnection.setFollowRedirects(false);
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+            com.setInstanceFollowRedirects(false);
             con.setRequestMethod("HEAD");
             con.setConnectTimeout(timeout);
 
@@ -148,8 +147,6 @@ public class ElasticsearchClient {
             return false;
         } catch (java.io.IOException e) {
             return false;
-        } finally {
-            HttpURLConnection.setFollowRedirects(followRedirectsOriginalValue);
         }
     }
 }
