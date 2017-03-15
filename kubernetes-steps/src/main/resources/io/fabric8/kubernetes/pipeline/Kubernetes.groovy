@@ -120,7 +120,7 @@ class Kubernetes implements Serializable {
         }
 
         public Pod withNfs(String mountPath, String serverAddress, String serverPath, Boolean readOnly) {
-            volumes.add(new NfsVolume(serviceAccount, serverPath, readOnly, mountPath))
+            volumes.add(new NfsVolume(serverAddress, serverPath, readOnly, mountPath))
             return this
         }
 

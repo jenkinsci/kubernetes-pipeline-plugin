@@ -114,6 +114,7 @@ public final class KubernetesFacade implements Closeable {
             String volumeName = String.format(VOLUME_FORMAT, volumeIndex);
             volumes.add(volume.buildVolume(volumeName));
             mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath(volume.getMountPath()).build());
+            volumeIndex++;
         }
 
         Node node = getNodeOfPod(hostname);
