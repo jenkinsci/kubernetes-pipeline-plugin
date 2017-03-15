@@ -27,9 +27,12 @@ import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -67,13 +70,22 @@ public class BuildListener extends RunListener<Run> {
             LOG.log(Level.WARNING, "Error getting environment", e);
         }
 
-        // ES doesnt like '.' in env var key names so replace any with '_' 
+        // ES doesnt like '.' in env var key names so replace any with '_'
+        Map<String,String> changeMap = new HashMap<>();
+        List<String> oldKeys = new ArrayList<>();
+
         for (String key :environment.keySet()) {
             if (key.contains(".")){
+                oldKeys.add(key);
                 String value = environment.get(key, "");
-                environment.remove(key);
-                environment.put(key.replace(".", "_"), value);
+                changeMap.put(key.replace(".", "_"), value);
             }
+        }
+        for (String key:oldKeys){
+            environment.remove(key);
+        }
+        for (Map.Entry<String,String>entry:changeMap.entrySet()){
+            environment.put(entry.getKey(),entry.getValue());
         }
 
 
