@@ -19,7 +19,7 @@
     <parent>
         <artifactId>kubernetes-pipeline-project</artifactId>
         <groupId>io.fabric8</groupId>
-        <version>1.4-SNAPSHOT</version>
+        <version>1.1.0.redhat-ipaas-002</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -37,7 +37,7 @@
 
         <dependency>
             <groupId>io.fabric8</groupId>
-            <artifactId>kubernetes-client</artifactId>
+            <artifactId>openshift-client</artifactId>
         </dependency>
 
         <dependency>
