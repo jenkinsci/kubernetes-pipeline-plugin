@@ -1,0 +1,48 @@
+<!--
+  Config page
+-->
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+
+  <f:entry field="cloud" title="${%Cloud}">
+    <f:textbox/>
+  </f:entry>
+
+  <f:entry field="name" title="${%Name}">
+    <f:textbox/>
+  </f:entry>
+
+  <f:entry field="prefix" title="${%Prefix}">
+    <f:textbox/>
+  </f:entry>
+
+
+  <f:entry title="${%Labels}" description="${%List of Labels}">
+    <f:repeatableHeteroProperty field="labels" hasHeader="true" addCaption="Add Label"
+                                        deleteCaption="Delete Label" />
+  </f:entry>
+
+    <f:entry title="${%Annotations}" description="${%List of Annotations}">
+      <f:repeatableHeteroProperty field="annotations" hasHeader="true" addCaption="Add Annotation"
+                                          deleteCaption="Delete Annotation" />
+    </f:entry>
+
+  <f:entry field="environmentSetupScriptUrl" title="${%Environment Setup Script Url}">
+    <f:textbox/>
+  </f:entry>
+
+  <f:entry field="environmentTeardownScriptUrl" title="${%Environment Teardown Script Url}">
+    <f:textbox/>
+  </f:entry>
+
+  <f:entry field="environmentConfigUrl" title="${%Environment Config Url}">
+    <f:textbox/>
+  </f:entry>
+
+ <f:entry field="environmentDependencies" title="${%Environment Dependencies}">
+    <f:textbox/>
+  </f:entry>
+
+</j:jelly>
