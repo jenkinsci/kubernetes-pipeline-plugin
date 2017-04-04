@@ -205,8 +205,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     break;
                 }
             }
-        } else {
-            throw new Exception("Adapting to OpenShiftClient not support. Check if adapter is present, and that env provides /oapi root path.");
         }
         if (!found){
             listener.getLogger().println("Creating environment " + environment);
