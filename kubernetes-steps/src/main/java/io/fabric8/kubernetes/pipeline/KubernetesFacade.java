@@ -155,6 +155,7 @@ public final class KubernetesFacade implements Closeable {
                 .withNewMetadata()
                     .withName(podTemplate.getName())
                     .addToLabels("owner", "jenkins")
+                    .addToLabels("name", podTemplate.getName())
                 .endMetadata()
                 .withNewSpec()
                     .withNodeSelector(node != null ? node.getMetadata().getLabels() : new HashMap<String, String>())
