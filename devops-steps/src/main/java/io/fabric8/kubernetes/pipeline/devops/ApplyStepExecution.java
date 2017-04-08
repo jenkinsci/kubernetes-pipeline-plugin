@@ -16,7 +16,6 @@
 
 package io.fabric8.kubernetes.pipeline.devops;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -28,7 +27,13 @@ import io.fabric8.devops.ProjectRepositories;
 import io.fabric8.kubernetes.api.Controller;
 import io.fabric8.kubernetes.api.KubernetesHelper;
 import io.fabric8.kubernetes.api.ServiceNames;
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.KubernetesList;
+import io.fabric8.kubernetes.api.model.KubernetesResource;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.ReplicationController;
+import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.extensions.Deployment;
 import io.fabric8.kubernetes.api.model.extensions.ReplicaSet;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -36,32 +41,45 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.internal.HasMetadataComparator;
 import io.fabric8.kubernetes.pipeline.devops.elasticsearch.DeploymentEventDTO;
 import io.fabric8.kubernetes.pipeline.devops.elasticsearch.ElasticsearchClient;
+import io.fabric8.kubernetes.pipeline.devops.elasticsearch.JsonUtils;
+import io.fabric8.kubernetes.pipeline.devops.git.GitConfig;
 import io.fabric8.kubernetes.pipeline.devops.git.GitInfoCallback;
-import io.fabric8.openshift.api.model.*;
+import io.fabric8.openshift.api.model.DeploymentConfig;
+import io.fabric8.openshift.api.model.Project;
+import io.fabric8.openshift.api.model.ProjectList;
+import io.fabric8.openshift.api.model.Template;
 import io.fabric8.openshift.client.DefaultOpenShiftClient;
 import io.fabric8.openshift.client.OpenShiftClient;
 import io.fabric8.utils.Strings;
 import io.fabric8.utils.Systems;
 import io.fabric8.utils.URLUtils;
 import io.fabric8.workflow.core.Constants;
-import io.fabric8.kubernetes.pipeline.devops.elasticsearch.JsonUtils;
-import io.fabric8.kubernetes.pipeline.devops.git.GitConfig;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jenkinsci.plugins.gitclient.Git;
 import org.jenkinsci.plugins.gitclient.GitClient;
-import org.jenkinsci.plugins.workflow.steps.*;
-
-import static io.fabric8.utils.PropertiesHelper.toMap;
+import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
+import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
 import javax.inject.Inject;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static io.fabric8.utils.PropertiesHelper.toMap;
 
 public class ApplyStepExecution extends AbstractSynchronousStepExecution<String> {
 
