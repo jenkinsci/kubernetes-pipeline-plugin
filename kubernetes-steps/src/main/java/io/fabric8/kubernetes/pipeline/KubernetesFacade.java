@@ -228,6 +228,7 @@ public final class KubernetesFacade implements Closeable {
                     }
 
                     @Override
+
                     public void onFailure(Throwable t, Response response) {
                         alive.set(false);
                         t.printStackTrace(out);
