@@ -69,6 +69,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -136,6 +137,13 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                 throw new AbortException("Cannot load kubernetes json: " + resources);
             }
 
+            Set<HasMetadata> entities = new TreeSet<>(new HasMetadataComparator());
+
+            List<HasMetadata> imageStreams = loadImageStreams();
+            if (imageStreams != null) {
+                entities.addAll(imageStreams);
+            }
+
             createEnvironment(environment, controller);
             controller.setNamespace(environment);
 
@@ -145,7 +153,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
             Set<KubernetesList> kubeConfigs = new LinkedHashSet<>();
 
-            Set<HasMetadata> entities = new TreeSet<>(new HasMetadataComparator());
             for (KubernetesList c : kubeConfigs) {
                 entities.addAll(c.getItems());
             }
@@ -228,6 +235,28 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             listener.getLogger().println("Creating environment " + environment);
             controller.applyNamespace(environment);
         }
+    }
+
+    private List<HasMetadata> loadImageStreams() throws IOException, InterruptedException {
+        if (kubernetes.isAdaptable(OpenShiftClient.class)) {
+            FilePath child = workspace.child("target");
+            if (child != null && child.exists() && child.isDirectory()) {
+                List<FilePath> paths = child.list();
+                if (paths != null) {
+                    for (FilePath path : paths) {
+                        String name = path.getName();
+                        if (path.exists() && !path.isDirectory() && name.endsWith("-is.yml")) {
+                            try (InputStream is = path.read()) {
+                                listener.getLogger().println("Loading OpenShift ImageStreams file: " + name);
+                                KubernetesResource dto = KubernetesHelper.loadYaml(is, KubernetesResource.class);
+                                return KubernetesHelper.toItemList(dto);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Collections.EMPTY_LIST;
     }
 
     private String getResources() throws AbortException {
@@ -563,11 +592,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
     private String readFile(String fileName) throws AbortException {
         try {
-            InputStream is = workspace.child(fileName).read();
-            try {
+            try (InputStream is = workspace.child(fileName).read()) {
                 return IOUtils.toString(is, Charsets.UTF_8);
-            } finally {
-                is.close();
             }
         } catch (Exception e) {
             throw new AbortException("Unable to read file " + fileName + ". " + e);
