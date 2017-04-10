@@ -17,6 +17,36 @@
 package io.fabric8.kubernetes.pipeline.devops;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
+import org.jenkinsci.plugins.gitclient.Git;
+import org.jenkinsci.plugins.gitclient.GitClient;
+import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
+import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.inject.Inject;
+
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -54,35 +84,10 @@ import io.fabric8.utils.Strings;
 import io.fabric8.utils.Systems;
 import io.fabric8.utils.URLUtils;
 import io.fabric8.workflow.core.Constants;
-import org.apache.commons.io.Charsets;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.exception.ExceptionUtils;
-import org.jenkinsci.plugins.gitclient.Git;
-import org.jenkinsci.plugins.gitclient.GitClient;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static io.fabric8.utils.PropertiesHelper.toMap;
 
-public class ApplyStepExecution extends AbstractSynchronousStepExecution<String> {
+public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<HasMetadata>> {
 
     @Inject
     private transient ApplyStep step;
@@ -98,13 +103,14 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
 
     private KubernetesClient kubernetes;
 
-    @Override
-    public String run() throws Exception {
+    private final List<HasMetadata> items = new ArrayList<>();
 
+    @Override
+    public List<HasMetadata> run() throws Exception {
         String environment = step.getEnvironment();
         String environmentName = step.getEnvironmentName();
         if (StringUtils.isBlank(environmentName)) {
-            environmentName = createDefaultEnvironmentName(environment);    
+            environmentName = createDefaultEnvironmentName(environment);
         }
 
         if (StringUtils.isBlank(environment)) {
@@ -127,7 +133,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             String resources = getResources();
 
             Object dto;
-            if (resources.startsWith("{")){
+            if (resources.startsWith("{")) {
                 dto = KubernetesHelper.loadJson(resources);
             } else {
                 dto = KubernetesHelper.loadYaml(resources.getBytes(), KubernetesResource.class);
@@ -162,7 +168,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
             addEnvironmentAnnotations(entities);
 
             String registry = getRegistry();
-            if (Strings.isNotBlank(registry)){
+            if (Strings.isNotBlank(registry)) {
                 listener.getLogger().println("Adapting resources to use pull images from registry: " + registry);
                 addRegistryToImageNameIfNotPresent(entities, registry);
             }
@@ -173,7 +179,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                 if (entity instanceof Pod) {
                     Pod pod = (Pod) entity;
                     controller.applyPod(pod, fileName);
-
+                    items.add(pod);
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
@@ -183,25 +189,28 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                 } else if (entity instanceof ReplicationController) {
                     ReplicationController replicationController = (ReplicationController) entity;
                     controller.applyReplicationController(replicationController, fileName);
-
+                    items.add(replicationController);
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
                 } else if (entity instanceof ReplicaSet) {
+                    ReplicaSet replicaSet = (ReplicaSet) entity;
                     controller.apply(entity, fileName);
-
+                    items.add(replicaSet);
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
                 } else if (entity instanceof Deployment) {
+                    Deployment deployment = (Deployment) entity;
                     controller.apply(entity, fileName);
-
+                    items.add(deployment);
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
                 } else if (entity instanceof DeploymentConfig) {
+                    DeploymentConfig deploymentConfig = (DeploymentConfig) entity;
                     controller.apply(entity, fileName);
-
+                    items.add(deploymentConfig);
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
@@ -209,11 +218,15 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
                     controller.apply(entity, fileName);
                 }
             }
+            if (step.getReadinessTimeout().intValue() > 0) {
+                    return kubernetes.resourceList(items).waitUntilReady(step.getReadinessTimeout(), TimeUnit.MILLISECONDS);
+            } else {
+                return items;
+            }
         } catch (Exception e) {
             String stacktrace = ExceptionUtils.getStackTrace(e);
             throw new AbortException("Error during kubernetes apply: " + stacktrace);
         }
-        return "OK";
     }
 
     private void createEnvironment(String environment, Controller controller) throws Exception {
@@ -263,7 +276,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<String>
         if (Strings.isNotBlank(step.getFile())){
             return step.getFile();
         } else {
-            if (kubernetes.isAdaptable(OpenShiftClient.class)){
+            if (getKubernetes().isAdaptable(OpenShiftClient.class)){
                 try{
                     return readFile("target/classes/META-INF/fabric8/openshift.yml");
                 } catch (AbortException e){
