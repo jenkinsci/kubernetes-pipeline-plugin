@@ -71,7 +71,8 @@ class Kubernetes implements Serializable {
         }
 
         public Pod withName(String name) {
-            return new Pod(kubernetes, name, containers, envVars, volumes, serviceAccount, nodeSelector, workingDir);
+            this.name = name
+            return this
         }
 
         @NonCPS
@@ -160,7 +161,7 @@ class Kubernetes implements Serializable {
                 }
                 kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector) {
                     kubernetes.script.node(label) {
-                        if (container != null && container.isEmpty()) {
+                        if (container != null && !container.isEmpty()) {
                             kubernetes.script.container(name: container) {
                                 body()
                             }
