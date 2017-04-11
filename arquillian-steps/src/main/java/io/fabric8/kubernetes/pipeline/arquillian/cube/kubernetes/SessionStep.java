@@ -33,7 +33,7 @@ public class SessionStep extends AbstractSessionManagerStep implements Serializa
 
 
     @DataBoundConstructor
-    public SessionStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, URL environmentSetupScriptUrl, URL environmentTeardownScriptUrl, URL environmentConfigUrl, List<URL> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceDestroyEnabled) {
+    public SessionStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceDestroyEnabled) {
        super(cloud, name, prefix, labels, annotations, environmentSetupScriptUrl, environmentTeardownScriptUrl, environmentConfigUrl, environmentDependencies, waitTimeout, waitForServiceList, namespaceLazyCreateEnabled, namespaceDestroyEnabled);
     }
 
