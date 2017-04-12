@@ -261,7 +261,7 @@ public final class KubernetesFacade implements Closeable {
             watch.getInput().write(NEWLINE.getBytes(UTF_8));
             watch.getInput().flush();
         } catch (Exception e) {
-            e.printStackTrace(out);
+            //e.printStackTrace(out);
         }
 
         return watch;
