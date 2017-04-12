@@ -77,7 +77,7 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
         String hostname = env.get(Constants.HOSTNAME, computer.getName());
         String jobname = env.get(Constants.JOB_NAME, computer.getName());
 
-        kubernetes.createPod(hostname, jobname, newTemplate, workspace.getRemote());
+        kubernetes.createPod(hostname, jobname, newTemplate, workspace.getRemote(), step.getLabels());
         kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 

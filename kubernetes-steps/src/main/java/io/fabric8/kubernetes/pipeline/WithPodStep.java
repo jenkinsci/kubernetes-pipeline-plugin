@@ -43,13 +43,14 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
     private final List<ContainerTemplate> containers;
     private final transient List<PodEnvVar> envVars;
     private final List<PodVolume> volumes;
+    private final Map<String, String> labels;
 
     private final String serviceAccount;
     private final String nodeSelector;
     private final String workingDir;
 
     @DataBoundConstructor
-    public WithPodStep(String name, List<ContainerTemplate> containers, Map<String, String> envVars, List<PodVolume> volumes, String serviceAccount, String nodeSelector, String workingDir) {
+    public WithPodStep(String name, List<ContainerTemplate> containers, Map<String, String> envVars, List<PodVolume> volumes, String serviceAccount, String nodeSelector, String workingDir, Map<String, String> labels) {
         this.name = name;
         this.containers = containers != null ? containers : Collections.emptyList();
         this.envVars = envVars != null ? asPodEnvars(envVars) : Collections.emptyList();
@@ -57,6 +58,7 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
         this.serviceAccount = serviceAccount;
         this.nodeSelector = nodeSelector;
         this.workingDir = Strings.isNullOrEmpty(workingDir) ? ContainerTemplate.DEFAULT_WORKING_DIR : workingDir;
+        this.labels = labels != null ? labels : Collections.emptyMap();
     }
 
     public String getName() {
@@ -82,6 +84,8 @@ public class WithPodStep extends AbstractStepImpl implements Serializable {
     public String getNodeSelector() {
         return nodeSelector;
     }
+
+    public Map<String, String> getLabels() { return labels; }
 
     public String getWorkingDir() {
         return workingDir;

@@ -61,6 +61,7 @@ class Kubernetes implements Serializable {
         private List<ContainerTemplate> containers = new ArrayList<>()
         private Map<String, String> envVars = new HashMap<>()
         private List<PodVolume> volumes = new ArrayList<>()
+        private Map<String, String> labels = new HashMap<>()
 
         private String serviceAccount;
         private String nodeSelector;
@@ -145,11 +146,16 @@ class Kubernetes implements Serializable {
             return this;
         }
 
+        public Pod withLabel(String name, String value) {
+            this.labels.put(name, value)
+            return this
+        }
+
 
         public <V> V inside(def container = "", Closure<V> body) {
             if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
                 // Already inside a node block.
-                kubernetes.script.withPod(name: name, containers: containers, envVars: envVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, workingDir: workingDir) {
+                kubernetes.script.withPod(name: name, containers: containers, envVars: envVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, workingDir: workingDir, labels: labels) {
                     body()
                 }
             } else {
@@ -158,7 +164,7 @@ class Kubernetes implements Serializable {
                 for (Map.Entry<String, String> entry : envVars.entrySet()) {
                     podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()));
                 }
-                kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector) {
+                kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, labels: labels) {
                     kubernetes.script.node(label) {
                         if (container != null && container.isEmpty()) {
                             kubernetes.script.container(name: container) {

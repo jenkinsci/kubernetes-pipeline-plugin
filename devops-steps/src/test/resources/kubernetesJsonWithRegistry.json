@@ -93,6 +93,14 @@
             }
           },
           "spec": {
+            "volumes": [
+              {
+                "name": "nginx-conf",
+                "configMap": {
+                  "name": "nginx-registry-config"
+                }
+              }
+            ],
             "containers": [
               {
                 "name": "my-test-image",
@@ -102,6 +110,12 @@
                     "name": "web",
                     "containerPort": 1111,
                   "protocol": "TCP"
+                  }
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "nginx-conf",
+                    "mountPath": "/etc/nginx/conf.d"
                   }
                 ],
                 "env": [
