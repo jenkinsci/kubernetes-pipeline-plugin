@@ -9,9 +9,9 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 public class NamespaceDestructionCallback extends BodyExecutionCallback.TailCall {
 
     private final String namespace;
-    private final Configuration configuration;
-    private final NamespaceService namespaceService;
-    private final NamespaceAction namespaceAction;
+    private final transient Configuration configuration;
+    private final transient NamespaceService namespaceService;
+    private final transient NamespaceAction namespaceAction;
 
     NamespaceDestructionCallback(String namespace, Configuration configuration, NamespaceService namespaceService, NamespaceAction namespaceAction) {
         this.namespace = namespace;

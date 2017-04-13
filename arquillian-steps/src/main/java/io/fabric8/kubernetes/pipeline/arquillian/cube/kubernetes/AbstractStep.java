@@ -22,16 +22,12 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
-import java.net.URL;
-import java.util.List;
-import java.util.Map;
 
 public class AbstractStep extends AbstractStepImpl implements Serializable {
 
     private static final long serialVersionUID = 5588861066775717487L;
 
     protected final String cloud;
-
 
     @DataBoundConstructor
     public AbstractStep(String cloud) {
