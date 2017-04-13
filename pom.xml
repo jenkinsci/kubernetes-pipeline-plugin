@@ -68,7 +68,7 @@
 
     <properties>
         <java.level>8</java.level>
-        <jenkins.version>2.32.1</jenkins.version>
+        <jenkins.version>2.7.4</jenkins.version>
 
         <arquillian-cube.version>1.1.0.redhat-ipaas-001</arquillian-cube.version>
         <commons-lang3.version>3.4</commons-lang3.version>
