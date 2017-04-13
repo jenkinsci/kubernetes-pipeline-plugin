@@ -78,7 +78,7 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
 
     private void init() throws AbortException {
         String sessionId = generateSessionId();
-        String namespace = generateNamespaceId(step.getName(), step.getPrefix(), sessionId);
+        String namespace = generateNamespaceId(getStep().getName(), getStep().getPrefix(), sessionId);
 
         client = getKubernetesClient();
         isOpenShift = client.isAdaptable(OpenShiftClient.class);
@@ -87,19 +87,19 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
                 .withMasterUrl(client.getMasterUrl())
                 .withNamespace(namespace)
                 .withEnvironmentInitEnabled(true)
-                .withNamespaceLazyCreateEnabled(step.isNamespaceLazyCreateEnabled())
-                .withNamespaceDestroyEnabled(step.isNamespaceDestroyEnabled())
-                .withEnvironmentDependencies(toURL(step.getEnvironmentDependencies()))
-                .withEnvironmentConfigUrl(toURL(step.getEnvironmentConfigUrl()))
-                .withEnvironmentSetupScriptUrl(toURL(step.getEnvironmentSetupScriptUrl()))
-                .withEnvironmentTeardownScriptUrl(toURL(step.getEnvironmentTeardownScriptUrl()))
+                .withNamespaceLazyCreateEnabled(getStep().isNamespaceLazyCreateEnabled())
+                .withNamespaceDestroyEnabled(getStep().isNamespaceDestroyEnabled())
+                .withEnvironmentDependencies(toURL(getStep().getEnvironmentDependencies()))
+                .withEnvironmentConfigUrl(toURL(getStep().getEnvironmentConfigUrl()))
+                .withEnvironmentSetupScriptUrl(toURL(getStep().getEnvironmentSetupScriptUrl()))
+                .withEnvironmentTeardownScriptUrl(toURL(getStep().getEnvironmentTeardownScriptUrl()))
                 .build();
 
         StreamLogger logger = new StreamLogger(listener.getLogger());
         session = new DefaultSession(sessionId, namespace, logger);
 
-        LabelProvider labelProvider = new MapLabelProvider(step.getLabels());
-        AnnotationProvider annotationProvider = new MapAnnotationProvider(step.getAnnotations());
+        LabelProvider labelProvider = new MapLabelProvider(getStep().getLabels());
+        AnnotationProvider annotationProvider = new MapAnnotationProvider(getStep().getAnnotations());
 
         NamespaceService namespaceService = isOpenShift
                 ? new OpenshiftNamespaceService.ImmutableOpenshiftNamespaceService(client, configuration, labelProvider, logger)

@@ -38,6 +38,7 @@ public class NamespaceStepExecution extends AbstractStepExecution<NamespaceStep>
 
     @Inject
     private NamespaceStep step;
+
     @StepContextParameter
     private transient TaskListener listener;
 
@@ -96,4 +97,8 @@ public class NamespaceStepExecution extends AbstractStepExecution<NamespaceStep>
     }
 
 
+    @Override
+    NamespaceStep getStep() {
+        return step;
+    }
 }

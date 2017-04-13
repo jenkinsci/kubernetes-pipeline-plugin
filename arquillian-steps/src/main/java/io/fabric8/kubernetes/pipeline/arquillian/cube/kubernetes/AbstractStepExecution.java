@@ -26,8 +26,7 @@ public abstract class AbstractStepExecution<S extends AbstractStep> extends Abst
 
     protected static final transient Logger LOGGER = Logger.getLogger(SessionStepExecution.class.getName());
 
-    @Inject
-    protected S step;
+    abstract S getStep();
 
     /**
      * Obtains a {@link KubernetesClient} either from the configured {@link Cloud} or a default instance.
@@ -36,19 +35,19 @@ public abstract class AbstractStepExecution<S extends AbstractStep> extends Abst
      */
     protected KubernetesClient getKubernetesClient() throws AbortException {
 
-        Cloud cloud = Jenkins.getInstance().getCloud(step.getCloud());
+        Cloud cloud = Jenkins.getInstance().getCloud(getStep().getCloud());
         if (cloud == null) {
-            LOGGER.warning("Cloud does not exist: [" + step.getCloud() + "]. Falling back to default KubernetesClient.");
+            LOGGER.warning("Cloud does not exist: [" + getStep().getCloud() + "]. Falling back to default KubernetesClient.");
         }
         if (!(cloud instanceof KubernetesCloud)) {
-            LOGGER.warning("Cloud is not a Kubernetes cloud: [" + step.getCloud() + "]. Falling back to default KubernetesClient.");
+            LOGGER.warning("Cloud is not a Kubernetes cloud: [" + getStep().getCloud() + "]. Falling back to default KubernetesClient.");
         }
         KubernetesCloud kubernetesCloud = (KubernetesCloud) cloud;
         try {
             String json = Serialization.asJson(kubernetesCloud.connect().getConfiguration());
             return DefaultKubernetesClient.fromConfig(json);
         } catch (Throwable t) {
-            LOGGER.warning("Could not connect to cloud: [" + step.getCloud() + "]. Falling back to default KubernetesClient.");
+            LOGGER.warning("Could not connect to cloud: [" + getStep().getCloud() + "]. Falling back to default KubernetesClient.");
             return new DefaultKubernetesClient();
         }
     }
