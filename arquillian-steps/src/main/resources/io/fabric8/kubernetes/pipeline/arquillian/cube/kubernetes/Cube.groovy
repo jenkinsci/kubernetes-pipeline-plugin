@@ -24,6 +24,10 @@ class Cube implements Serializable {
         this.script = script
     }
 
+    public String getCurrentNamespace() {
+        return script.currentNamespace()
+    }
+
     public Namespace namespace() {
         return new Namespace(this)
     }
@@ -187,8 +191,8 @@ class Cube implements Serializable {
             return this
         }
 
-        public Environment withTimeout(Long timeout) {
-            this.timeout = timeout
+        public Environment withWaitTimeout(Long waitTimeout) {
+            this.waitTimeout = waitTimeout
             return this
         }
 

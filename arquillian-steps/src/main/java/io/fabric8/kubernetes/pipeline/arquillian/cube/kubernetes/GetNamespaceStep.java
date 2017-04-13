@@ -17,31 +17,34 @@
 package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
-import java.net.URL;
-import java.util.List;
-import java.util.Map;
 
 import hudson.Extension;
 
-public class SessionStep extends AbstractSessionManagerStep implements Serializable {
+public class GetNamespaceStep extends AbstractStepImpl implements Serializable {
 
     private static final long serialVersionUID = 5588861066775717487L;
 
+    private final String fallbackNamespace;
+
     @DataBoundConstructor
-    public SessionStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceDestroyEnabled) {
-       super(cloud, name, prefix, labels, annotations, environmentSetupScriptUrl, environmentTeardownScriptUrl, environmentConfigUrl, environmentDependencies, waitTimeout, waitForServiceList, namespaceLazyCreateEnabled, namespaceDestroyEnabled);
+    public GetNamespaceStep(String fallbackNamespace) {
+        this.fallbackNamespace = fallbackNamespace;
     }
 
+    public String getFallbackNamespace() {
+        return fallbackNamespace;
+    }
 
     @Extension
     public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
        public DescriptorImpl() {
-            super(SessionStepExecution.class);
+            super(GetNamespaceStepExecution.class);
         }
 
         public DescriptorImpl(Class<? extends StepExecution> executionType) {
@@ -50,12 +53,12 @@ public class SessionStep extends AbstractSessionManagerStep implements Serializa
 
         @Override
         public String getFunctionName() {
-            return "arquillianCubeKubernetesSession";
+            return "currentNamespace";
         }
 
         @Override
         public String getDisplayName() {
-            return "Run build steps inside an Arquillian Cube Kubernetes Session";
+            return "Returns the current namespace";
         }
 
         @Override

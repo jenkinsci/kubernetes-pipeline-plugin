@@ -35,7 +35,7 @@ import org.arquillian.cube.kubernetes.impl.namespace.DefaultNamespaceService;
 import org.arquillian.cube.openshift.impl.install.OpenshiftResourceInstaller;
 import org.arquillian.cube.openshift.impl.locator.OpenshiftKubernetesResourceLocator;
 import org.arquillian.cube.openshift.impl.namespace.OpenshiftNamespaceService;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -43,15 +43,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import hudson.AbortException;
 import hudson.model.TaskListener;
 import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.kubernetes.clnt.v2_2.KubernetesClient;
 import io.fabric8.openshift.clnt.v2_2.OpenShiftClient;
 
 public abstract class AbstractSessionManagerStepExecution<S extends AbstractSessionManagerStep> extends AbstractStepExecution<S> {
-
-    @StepContextParameter private transient TaskListener listener;
 
     protected Session session;
     protected transient KubernetesClient client;
@@ -60,15 +57,24 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
 
     protected boolean isOpenShift;
 
-    public abstract void onStart(SessionManager sessionManager) throws Exception;
+    /**
+     * Called when the execution starts
+     * @return  true if the execution of this step has synchronously completed before this method returns.
+     * @throws Exception
+     */
+    public abstract boolean onStart(SessionManager sessionManager) throws Exception;
 
+    /**
+     * Called when the execution ends.
+     * @param sessionManager
+     * @throws Exception
+     */
     public abstract void onStop(SessionManager sessionManager) throws Exception;
 
     @Override
     public boolean start() throws Exception {
         init();
-        onStart(sessionManager);
-        return true;
+        return onStart(sessionManager);
     }
 
     @Override
@@ -76,7 +82,7 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
         onStop(sessionManager);
     }
 
-    private void init() throws AbortException {
+    protected void init() throws Exception {
         String sessionId = generateSessionId();
         String namespace = generateNamespaceId(getStep().getName(), getStep().getPrefix(), sessionId);
 
@@ -95,6 +101,7 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
                 .withEnvironmentTeardownScriptUrl(toURL(getStep().getEnvironmentTeardownScriptUrl()))
                 .build();
 
+        TaskListener listener = getContext().get(TaskListener.class);
         StreamLogger logger = new StreamLogger(listener.getLogger());
         session = new DefaultSession(sessionId, namespace, logger);
 

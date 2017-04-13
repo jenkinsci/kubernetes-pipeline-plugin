@@ -26,8 +26,14 @@ public class CreateEnvironmentStepExecution extends AbstractSessionManagerStepEx
     private CreateEnvironmentStep step;
 
     @Override
-    public void onStart(SessionManager sessionManager) {
-        sessionManager.createEnvironment(session);
+    public boolean onStart(SessionManager sessionManager) {
+        try {
+            sessionManager.createEnvironment(session);
+            getContext().onSuccess(true);
+        } catch (Throwable t) {
+            getContext().onFailure(t);
+        }
+        return true;
     }
 
     @Override

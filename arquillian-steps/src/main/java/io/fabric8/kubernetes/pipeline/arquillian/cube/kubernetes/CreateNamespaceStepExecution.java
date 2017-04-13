@@ -24,7 +24,6 @@ import org.arquillian.cube.kubernetes.impl.namespace.DefaultNamespaceService;
 import org.arquillian.cube.openshift.impl.namespace.OpenshiftNamespaceService;
 import org.csanchez.jenkins.plugins.kubernetes.pipeline.NamespaceAction;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
 import javax.inject.Inject;
 
@@ -34,13 +33,10 @@ import io.fabric8.kubernetes.clnt.v2_2.KubernetesClient;
 import io.fabric8.openshift.clnt.v2_2.OpenShiftClient;
 
 
-public class NamespaceStepExecution extends AbstractStepExecution<NamespaceStep> {
+public class CreateNamespaceStepExecution extends AbstractStepExecution<CreateNamespaceStep> {
 
     @Inject
-    private NamespaceStep step;
-
-    @StepContextParameter
-    private transient TaskListener listener;
+    private CreateNamespaceStep step;
 
     private String sessionId;
     private String namespace;
@@ -52,6 +48,7 @@ public class NamespaceStepExecution extends AbstractStepExecution<NamespaceStep>
 
     @Override
     public boolean start() throws Exception {
+        TaskListener listener = getContext().get(TaskListener.class);
         NamespaceAction namespaceAction = new NamespaceAction(getContext().get(Run.class));
 
         sessionId = generateSessionId();
@@ -98,7 +95,7 @@ public class NamespaceStepExecution extends AbstractStepExecution<NamespaceStep>
 
 
     @Override
-    NamespaceStep getStep() {
+    CreateNamespaceStep getStep() {
         return step;
     }
 }

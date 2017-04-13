@@ -27,7 +27,7 @@ public class SessionStepExecution extends AbstractSessionManagerStepExecution<Se
     private SessionStep step;
 
     @Override
-    public void onStart(SessionManager sessionManager) throws Exception {
+    public boolean onStart(SessionManager sessionManager) throws Exception {
         sessionManager.start();
 
         getContext().newBodyInvoker().
@@ -35,6 +35,7 @@ public class SessionStepExecution extends AbstractSessionManagerStepExecution<Se
                 withCallback(new SessionManagerStopCallback(sessionManager)).
                 start();
 
+        return false;
     }
 
     @Override

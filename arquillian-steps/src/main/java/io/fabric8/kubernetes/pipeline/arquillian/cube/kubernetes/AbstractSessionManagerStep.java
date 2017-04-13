@@ -60,8 +60,8 @@ public class AbstractSessionManagerStep extends AbstractStep implements Serializ
         this.environmentDependencies = environmentDependencies;
         this.waitTimeout = waitTimeout;
         this.waitForServiceList = waitForServiceList;
-        this.namespaceLazyCreateEnabled = namespaceLazyCreateEnabled;
-        this.namespaceDestroyEnabled = namespaceDestroyEnabled;
+        this.namespaceLazyCreateEnabled = namespaceLazyCreateEnabled != null ? namespaceLazyCreateEnabled : true;
+        this.namespaceDestroyEnabled = namespaceDestroyEnabled != null ? namespaceDestroyEnabled : true;
     }
 
     public String getName() {

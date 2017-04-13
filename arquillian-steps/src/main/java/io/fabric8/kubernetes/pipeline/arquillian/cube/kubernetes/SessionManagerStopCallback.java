@@ -6,11 +6,12 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 public class SessionManagerStopCallback extends BodyExecutionCallback.TailCall {
 
-    private final SessionManager sessionManager;
+    private final transient SessionManager sessionManager;
 
     public SessionManagerStopCallback(SessionManager sessionManager) {
         this.sessionManager = sessionManager;
     }
+
 
 
     @Override
