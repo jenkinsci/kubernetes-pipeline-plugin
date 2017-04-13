@@ -18,7 +18,12 @@ package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 
 import org.arquillian.cube.kubernetes.impl.SessionManager;
 
+import javax.inject.Inject;
+
 public class CreateEnvironmentStepExecution extends AbstractSessionManagerStepExecution<CreateEnvironmentStep> {
+
+    @Inject
+    private CreateEnvironmentStep step;
 
     @Override
     public void onStart(SessionManager sessionManager) {
@@ -31,4 +36,8 @@ public class CreateEnvironmentStepExecution extends AbstractSessionManagerStepEx
     }
 
 
+    @Override
+    CreateEnvironmentStep getStep() {
+        return step;
+    }
 }

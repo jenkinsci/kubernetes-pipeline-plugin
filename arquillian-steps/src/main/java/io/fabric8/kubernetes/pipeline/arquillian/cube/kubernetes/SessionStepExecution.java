@@ -19,7 +19,12 @@ package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 import org.arquillian.cube.kubernetes.impl.SessionManager;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
 
+import javax.inject.Inject;
+
 public class SessionStepExecution extends AbstractSessionManagerStepExecution<SessionStep> {
+
+    @Inject
+    private SessionStep step;
 
     @Override
     public void onStart(SessionManager sessionManager) throws Exception {
@@ -37,4 +42,8 @@ public class SessionStepExecution extends AbstractSessionManagerStepExecution<Se
         sessionManager.stop();
     }
 
+    @Override
+    public SessionStep getStep() {
+        return step;
+    }
 }
