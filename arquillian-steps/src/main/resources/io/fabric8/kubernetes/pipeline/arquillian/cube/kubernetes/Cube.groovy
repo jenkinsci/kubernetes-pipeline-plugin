@@ -226,8 +226,9 @@ class Cube implements Serializable {
                     environmentConfigUrl: environmentConfigUrl,
                     environmentDependencies: environmentDependencies,
                     waitTimeout: waitTimeout,
-                    waitForServiceList, waitForServiceList,
-                    namespaceLazyCreateEnabled: namespaceDestroyEnabled, namespaceDestroyEnabled: namespaceDestroyEnabled)
+                    waitForServiceList: waitForServiceList,
+                    namespaceLazyCreateEnabled: namespaceDestroyEnabled,
+                    namespaceDestroyEnabled: namespaceDestroyEnabled)
         }
     }
 }
