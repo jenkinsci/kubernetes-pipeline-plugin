@@ -21,22 +21,26 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Map;
 
 /**
+ * The YAML structure to store the service URLs and deployment versions for an environment
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class ServiceEnvironments {
+public class EnvironmentRollout {
     private final String environmentName;
     private final Map<String, String> serviceUrls;
+    private final Map<String, String> deploymentVersions;
 
-    public ServiceEnvironments(String environmentName, Map<String, String> serviceUrls) {
+    public EnvironmentRollout(String environmentName, Map<String, String> serviceUrls, Map<String, String> deploymentVersions) {
         this.environmentName = environmentName;
         this.serviceUrls = serviceUrls;
+        this.deploymentVersions = deploymentVersions;
     }
 
     @Override
     public String toString() {
-        return "ServiceEnvironments{" +
+        return "EnvironmentRollout{" +
                 "environmentName='" + environmentName + '\'' +
                 ", serviceUrls=" + serviceUrls +
+                ", deploymentVersions=" + deploymentVersions +
                 '}';
     }
 
@@ -46,5 +50,9 @@ public class ServiceEnvironments {
 
     public Map<String, String> getServiceUrls() {
         return serviceUrls;
+    }
+
+    public Map<String, String> getDeploymentVersions() {
+        return deploymentVersions;
     }
 }

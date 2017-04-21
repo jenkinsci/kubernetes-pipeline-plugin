@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.PluginManager;
 import hudson.model.Job;
 import hudson.model.Run;
+import io.fabric8.openshift.api.model.BuildFluent;
+import io.fabric8.openshift.api.model.DoneableBuild;
 import jenkins.model.Jenkins;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.io.Charsets;
@@ -193,6 +195,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
             findOpenShiftBuildConfigName();
             listener.getLogger().println("Found BuildConfig: " + buildConfigName + " namespace: " + buildConfigNamespace + " Build: " + buildName);
 
+            Map<String,String> deploymentVersions = new HashMap<>();
             List<Service> services = new ArrayList<>();
             //Apply all items
             for (HasMetadata entity : entities) {
@@ -225,6 +228,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                     Deployment deployment = (Deployment) entity;
                     controller.apply(entity, fileName);
                     items.add(deployment);
+                    addDeploymentVersion(deploymentVersions, deployment);
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
@@ -232,6 +236,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                     DeploymentConfig deploymentConfig = (DeploymentConfig) entity;
                     controller.apply(entity, fileName);
                     items.add(deploymentConfig);
+                    addDeploymentVersion(deploymentVersions, deploymentConfig);
                     String event = getDeploymentEventJson(entity.getKind(), environment, environmentName);
                     ElasticsearchClient.createEvent(event, ElasticsearchClient.DEPLOYMENT, listener);
 
@@ -258,12 +263,18 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
             // TODO should we export the serviceUrls as an artifact so it can be viewed in the Jenkins console?
 
             if (this.buildName != null && !serviceUrls.isEmpty() && isOpenShift()) {
-                ServiceEnvironments serviceEnvironments = new ServiceEnvironments(environmentName, serviceUrls);
-                String yaml = KubernetesHelper.toYaml(serviceEnvironments);
+                EnvironmentRollout environmentRollout = new EnvironmentRollout(environmentName, serviceUrls, deploymentVersions);
+                String yaml = KubernetesHelper.toYaml(environmentRollout);
                 OpenShiftClient oClient = new DefaultOpenShiftClient();
                 try {
-                    oClient.builds().inNamespace(this.buildConfigNamespace).withName(buildName).edit().
-                            editMetadata().addToAnnotations("environment.services.fabric8.io/" + environment, yaml).endMetadata().done();
+                    BuildFluent.MetadataNested<DoneableBuild> builder = oClient.builds().inNamespace(this.buildConfigNamespace).withName(buildName).
+                            edit().
+                            editMetadata().addToAnnotations("environment.services.fabric8.io/" + environment, yaml);
+                    String version = deploymentVersions.get(this.buildConfigName);
+                    if (Strings.isNotBlank(version)) {
+                        builder.addToAnnotations("fabric8.io/version", version);
+                    }
+                    builder.endMetadata().done();
                 } catch (Exception e) {
                     listener.getLogger().println("Failed to annotate Build " + buildName + " in namespace " + this.buildConfigNamespace + " due to: " + e);
                 }
@@ -272,6 +283,15 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         } catch (Exception e) {
             String stacktrace = ExceptionUtils.getStackTrace(e);
             throw new AbortException("Error during kubernetes apply: " + stacktrace);
+        }
+    }
+
+    private void addDeploymentVersion(Map<String, String> deploymentVersions, HasMetadata resource) {
+        String name = KubernetesHelper.getName(resource);
+        String version = KubernetesHelper.getLabels(resource).get("version");
+        // TODO if there is no version label could we find it from somewhere else?
+        if (Strings.isNotBlank(version)) {
+            deploymentVersions.put(name, version);
         }
     }
 
