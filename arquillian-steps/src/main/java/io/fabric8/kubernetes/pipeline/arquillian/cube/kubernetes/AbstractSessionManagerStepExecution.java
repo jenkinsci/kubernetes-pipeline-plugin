@@ -110,6 +110,8 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
                 .withEnvironmentConfigUrl(toURL(getStep().getEnvironmentConfigUrl()))
                 .withEnvironmentSetupScriptUrl(toURL(getStep().getEnvironmentSetupScriptUrl()))
                 .withEnvironmentTeardownScriptUrl(toURL(getStep().getEnvironmentTeardownScriptUrl()))
+                .withWaitForServiceList(getStep().getWaitForServiceList())
+                .withWaitTimeout(getStep().getWaitTimeout())
                 .build();
 
         TaskListener listener = getContext().get(TaskListener.class);
@@ -201,7 +203,4 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
         urls.forEach(u -> result.add(toURL(u)));
         return result;
     }
-
-
-
 }
