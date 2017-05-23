@@ -34,10 +34,15 @@ public class GetNamespaceStepExecution extends AbstractSynchronousStepExecution<
 
     @Override
     protected String run() throws Exception {
-        FilePath workspace = getContext().get(FilePath.class);
-        String namespace = workspace.child(Config.KUBERNETES_NAMESPACE_PATH).readToString();
-        if (Utils.isNotNullOrEmpty(namespace)) {
-            return namespace;
+        String namespace = null;
+        try {
+            FilePath workspace = getContext().get(FilePath.class);
+            namespace = workspace.child(Config.KUBERNETES_NAMESPACE_PATH).readToString();
+            if (Utils.isNotNullOrEmpty(namespace)) {
+                return namespace;
+            }
+        } catch (Throwable t) {
+            //it might be executed outside of a `node` block in which case, we want to ignore.
         }
 
         NamespaceAction namespaceAction = new NamespaceAction(getContext().get(Run.class));

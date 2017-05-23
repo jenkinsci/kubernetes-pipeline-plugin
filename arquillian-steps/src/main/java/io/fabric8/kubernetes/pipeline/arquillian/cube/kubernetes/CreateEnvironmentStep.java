@@ -21,7 +21,6 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
-import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
@@ -32,8 +31,8 @@ public class CreateEnvironmentStep extends AbstractSessionManagerStep implements
     private static final long serialVersionUID = 5588861066775717487L;
 
     @DataBoundConstructor
-    public CreateEnvironmentStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceDestroyEnabled) {
-        super(cloud, name, prefix, labels, annotations, environmentSetupScriptUrl, environmentTeardownScriptUrl, environmentConfigUrl, environmentDependencies, waitTimeout, waitForServiceList, namespaceLazyCreateEnabled, namespaceDestroyEnabled);
+    public CreateEnvironmentStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceCleanupEnabled, Boolean namespaceDestroyEnabled) {
+        super(cloud, name, prefix, labels, annotations, environmentSetupScriptUrl, environmentTeardownScriptUrl, environmentConfigUrl, environmentDependencies, waitTimeout, waitForServiceList, namespaceLazyCreateEnabled, namespaceCleanupEnabled, namespaceDestroyEnabled);
     }
 
     @Extension

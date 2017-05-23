@@ -19,7 +19,6 @@ package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
-import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
@@ -44,11 +43,11 @@ public class AbstractSessionManagerStep extends AbstractStep implements Serializ
     protected final List<String> waitForServiceList;
 
     protected final Boolean namespaceLazyCreateEnabled;
+    protected final Boolean namespaceCleanupEnabled;
     protected final Boolean namespaceDestroyEnabled;
 
-
     @DataBoundConstructor
-    public AbstractSessionManagerStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceDestroyEnabled) {
+    public AbstractSessionManagerStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceCleanupEnabled, Boolean namespaceDestroyEnabled) {
         super(cloud);
         this.name = name;
         this.prefix = prefix;
@@ -61,7 +60,8 @@ public class AbstractSessionManagerStep extends AbstractStep implements Serializ
         this.waitTimeout = waitTimeout;
         this.waitForServiceList = waitForServiceList;
         this.namespaceLazyCreateEnabled = namespaceLazyCreateEnabled != null ? namespaceLazyCreateEnabled : true;
-        this.namespaceDestroyEnabled = namespaceDestroyEnabled != null ? namespaceDestroyEnabled : true;
+        this.namespaceCleanupEnabled = namespaceCleanupEnabled;
+        this.namespaceDestroyEnabled = namespaceDestroyEnabled;
     }
 
     public String getName() {
@@ -106,6 +106,11 @@ public class AbstractSessionManagerStep extends AbstractStep implements Serializ
 
     public Boolean isNamespaceLazyCreateEnabled() {
         return namespaceLazyCreateEnabled;
+    }
+
+
+    public Boolean isNamespaceCleanupEnabled() {
+        return namespaceCleanupEnabled;
     }
 
     public Boolean isNamespaceDestroyEnabled() {

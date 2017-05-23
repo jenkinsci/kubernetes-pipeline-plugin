@@ -116,7 +116,8 @@ class Cube implements Serializable {
         private Map<String, String> annotations
 
         private Boolean namespaceLazyCreateEnabled = true
-        private Boolean namespaceDestroyEnabled = true
+        private Boolean namespaceCleanupEnabled = null
+        private Boolean namespaceDestroyEnabled = null
 
         private String environmentSetupScriptUrl;
         private String environmentTeardownScriptUrl;
@@ -214,8 +215,13 @@ class Cube implements Serializable {
             return this
         }
 
-        public Environment withDestroyEnabled(namespaceDestroyEnabled = true) {
+        public Environment withNamespaceDestroyEnabled(namespaceDestroyEnabled = true) {
             this.namespaceDestroyEnabled = namespaceDestroyEnabled
+            return this
+        }
+
+        public Environment withNamespaceCleanupEnabled(namespaceCleanupEnabled = true) {
+            this.namespaceCleanupEnabled = namespaceCleanupEnabled
             return this
         }
 
@@ -227,7 +233,8 @@ class Cube implements Serializable {
                     environmentDependencies: environmentDependencies,
                     waitTimeout: waitTimeout,
                     waitForServiceList: waitForServiceList,
-                    namespaceLazyCreateEnabled: namespaceDestroyEnabled,
+                    namespaceLazyCreateEnabled: namespaceLazyCreateEnabled,
+                    namespaceCleanupEnabled: namespaceCleanupEnabled,
                     namespaceDestroyEnabled: namespaceDestroyEnabled)
         }
     }
