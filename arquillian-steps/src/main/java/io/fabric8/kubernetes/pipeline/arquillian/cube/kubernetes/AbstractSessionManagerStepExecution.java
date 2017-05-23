@@ -35,6 +35,7 @@ import org.arquillian.cube.kubernetes.impl.namespace.DefaultNamespaceService;
 import org.arquillian.cube.openshift.impl.install.OpenshiftResourceInstaller;
 import org.arquillian.cube.openshift.impl.locator.OpenshiftKubernetesResourceLocator;
 import org.arquillian.cube.openshift.impl.namespace.OpenshiftNamespaceService;
+import org.csanchez.jenkins.plugins.kubernetes.pipeline.NamespaceAction;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import java.net.MalformedURLException;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.kubernetes.clnt.v2_2.KubernetesClient;
@@ -84,17 +86,26 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
 
     protected void init() throws Exception {
         String sessionId = generateSessionId();
-        String namespace = generateNamespaceId(getStep().getName(), getStep().getPrefix(), sessionId);
+        String namespace = generateNamespaceId(sessionId);
 
         client = getKubernetesClient();
         isOpenShift = client.isAdaptable(OpenShiftClient.class);
+
+        boolean isNamespaceCleanupEnabled = getStep().isNamespaceCleanupEnabled() != null
+                ? getStep().isNamespaceCleanupEnabled()
+                : false;
+
+        boolean isNamespaceDestroyEnabled = getStep().isNamespaceDestroyEnabled() != null
+                ? getStep().isNamespaceDestroyEnabled()
+                : !isNamespaceProvided();
 
         configuration = new DefaultConfigurationBuilder()
                 .withMasterUrl(client.getMasterUrl())
                 .withNamespace(namespace)
                 .withEnvironmentInitEnabled(true)
                 .withNamespaceLazyCreateEnabled(getStep().isNamespaceLazyCreateEnabled())
-                .withNamespaceDestroyEnabled(getStep().isNamespaceDestroyEnabled())
+                .withNamespaceCleanupEnabled(isNamespaceCleanupEnabled)
+                .withNamespaceDestroyEnabled(isNamespaceDestroyEnabled)
                 .withEnvironmentDependencies(toURL(getStep().getEnvironmentDependencies()))
                 .withEnvironmentConfigUrl(toURL(getStep().getEnvironmentConfigUrl()))
                 .withEnvironmentSetupScriptUrl(toURL(getStep().getEnvironmentSetupScriptUrl()))
@@ -129,7 +140,42 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
                 dependencyResolver, resourceInstaller, feedbackProvider);
     }
 
+    protected boolean isNamespaceProvided() {
+        if (Utils.isNotNullOrEmpty(getStep().getName())) {
+            return true;
+        }
 
+        NamespaceAction namespaceAction = getNamespaceAction();
+        if (namespaceAction != null && Utils.isNotNullOrEmpty(namespaceAction.getNamespace())) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Generates a namespace id/name if one has not been explicitly specified.
+     * If no name or prefix is specified, it will try to determine a namespace based on the enclosing elements.
+     * Finally it will fallback to generating one using the default prefix.
+     *
+     * @param sessionId     The id of the session.
+     * @return              The name if not null or empty, else prefix-sessionId.
+     */
+    protected String generateNamespaceId(String sessionId) {
+        return super.generateNamespaceId(getStep().getName(), getStep().getPrefix(), sessionId);
+    }
+
+
+    /**
+     * Lookup namespace that is already defined in the current build.
+     * @return The {@link NamespaceAction}.
+     */
+    protected NamespaceAction getNamespaceAction() {
+        try {
+            return new NamespaceAction(getContext().get(Run.class));
+        } catch (Throwable t) {
+            return null;
+        }
+    }
     protected URL toURL(String url) {
         if (Utils.isNullOrEmpty(url)) {
             return null;
@@ -155,5 +201,7 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
         urls.forEach(u -> result.add(toURL(u)));
         return result;
     }
+
+
 
 }
