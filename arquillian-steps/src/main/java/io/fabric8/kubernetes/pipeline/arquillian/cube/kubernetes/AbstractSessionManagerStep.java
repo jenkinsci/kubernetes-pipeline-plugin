@@ -16,15 +16,15 @@
 
 package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
-public class AbstractSessionManagerStep extends AbstractStep implements Serializable {
+public abstract class AbstractSessionManagerStep extends AbstractStep implements Serializable {
 
     private static final long serialVersionUID = 5588861066775717487L;
+
+    private static final long DEFAULT_WAIT_TIMEOUT = 5*60*1000;
 
     protected final String name;
     protected final String prefix;
@@ -46,7 +46,6 @@ public class AbstractSessionManagerStep extends AbstractStep implements Serializ
     protected final Boolean namespaceCleanupEnabled;
     protected final Boolean namespaceDestroyEnabled;
 
-    @DataBoundConstructor
     public AbstractSessionManagerStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceCleanupEnabled, Boolean namespaceDestroyEnabled) {
         super(cloud);
         this.name = name;
@@ -57,7 +56,7 @@ public class AbstractSessionManagerStep extends AbstractStep implements Serializ
         this.environmentTeardownScriptUrl = environmentTeardownScriptUrl;
         this.environmentConfigUrl = environmentConfigUrl;
         this.environmentDependencies = environmentDependencies;
-        this.waitTimeout = waitTimeout;
+        this.waitTimeout = waitTimeout != null ? waitTimeout : DEFAULT_WAIT_TIMEOUT;
         this.waitForServiceList = waitForServiceList;
         this.namespaceLazyCreateEnabled = namespaceLazyCreateEnabled != null ? namespaceLazyCreateEnabled : true;
         this.namespaceCleanupEnabled = namespaceCleanupEnabled;

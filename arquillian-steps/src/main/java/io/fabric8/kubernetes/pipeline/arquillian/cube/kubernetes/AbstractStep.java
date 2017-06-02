@@ -19,17 +19,19 @@ package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 import com.google.common.base.Strings;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.Serializable;
 
-public class AbstractStep extends AbstractStepImpl implements Serializable {
+public abstract class AbstractStep extends Step implements Serializable {
 
     private static final long serialVersionUID = 5588861066775717487L;
 
     protected final String cloud;
 
-    @DataBoundConstructor
     public AbstractStep(String cloud) {
         this.cloud = Strings.isNullOrEmpty(cloud) ?  "kubernetes" : cloud;
     }

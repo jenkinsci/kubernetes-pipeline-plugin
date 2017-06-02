@@ -3,11 +3,7 @@ package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.csanchez.jenkins.plugins.kubernetes.KubernetesCloud;
 import org.csanchez.jenkins.plugins.kubernetes.pipeline.NamespaceAction;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-
 import java.util.logging.Logger;
-
-import javax.inject.Inject;
 
 import hudson.AbortException;
 import hudson.model.Run;
@@ -17,8 +13,10 @@ import io.fabric8.kubernetes.clnt.v2_5.DefaultKubernetesClient;
 import io.fabric8.kubernetes.clnt.v2_5.KubernetesClient;
 import io.fabric8.kubernetes.clnt.v2_5.utils.Serialization;
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 
-public abstract class AbstractStepExecution<S extends AbstractStep> extends AbstractStepExecutionImpl {
+public abstract class AbstractStepExecution<S extends AbstractStep> extends StepExecution {
 
     private static final transient String NAME_FORMAT = "%s-%s";
     private static final transient String DEFAULT_PREFIX = "temp";
@@ -27,6 +25,10 @@ public abstract class AbstractStepExecution<S extends AbstractStep> extends Abst
     protected static final transient Logger LOGGER = Logger.getLogger(SessionStepExecution.class.getName());
 
     abstract S getStep();
+
+     AbstractStepExecution(StepContext context) {
+        super(context);
+    }
 
     /**
      * Obtains a {@link KubernetesClient} either from the configured {@link Cloud} or a default instance.
@@ -38,18 +40,18 @@ public abstract class AbstractStepExecution<S extends AbstractStep> extends Abst
         Cloud cloud = Jenkins.getInstance().getCloud(getStep().getCloud());
         if (cloud == null) {
             LOGGER.warning("Cloud does not exist: [" + getStep().getCloud() + "]. Falling back to default KubernetesClient.");
-        }
-        if (!(cloud instanceof KubernetesCloud)) {
+        } else if (!(cloud instanceof KubernetesCloud)) {
             LOGGER.warning("Cloud is not a Kubernetes cloud: [" + getStep().getCloud() + "]. Falling back to default KubernetesClient.");
+        } else {
+            KubernetesCloud kubernetesCloud = (KubernetesCloud) cloud;
+            try {
+                String json = Serialization.asJson(kubernetesCloud.connect().getConfiguration());
+                return DefaultKubernetesClient.fromConfig(json);
+            } catch (Throwable t) {
+                LOGGER.warning("Could not connect to cloud: [" + getStep().getCloud() + "]. Falling back to default KubernetesClient.");
+            }
         }
-        KubernetesCloud kubernetesCloud = (KubernetesCloud) cloud;
-        try {
-            String json = Serialization.asJson(kubernetesCloud.connect().getConfiguration());
-            return DefaultKubernetesClient.fromConfig(json);
-        } catch (Throwable t) {
-            LOGGER.warning("Could not connect to cloud: [" + getStep().getCloud() + "]. Falling back to default KubernetesClient.");
-            return new DefaultKubernetesClient();
-        }
+        return new DefaultKubernetesClient();
     }
 
 

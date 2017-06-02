@@ -96,7 +96,7 @@ class Cube implements Serializable {
         }
 
         public <V> V inside(Closure<V> body) {
-            cube.script.arquillianCubeKubernetesNamespace(name: name, prefix: prefix, labels: labels, annotations: annotations, namespaceLazyCreateEnabled: namespaceDestroyEnabled, namespaceDestroyEnabled: namespaceDestroyEnabled) {
+            cube.script.arquillianCubeKubernetesNamespace(cloud: cloud, name: name, prefix: prefix, labels: labels, annotations: annotations, namespaceLazyCreateEnabled: namespaceDestroyEnabled, namespaceDestroyEnabled: namespaceDestroyEnabled) {
                 body()
             }
         }
@@ -226,7 +226,7 @@ class Cube implements Serializable {
         }
 
         public <V> V create() {
-            cube.script.arquillianCubeKubernetesCreateEnv(name: name, prefix: prefix, labels: labels, annotations: annotations,
+            cube.script.arquillianCubeKubernetesCreateEnv(cloud: cloud, name: name, prefix: prefix, labels: labels, annotations: annotations,
                     environmentSetupScriptUrl: environmentSetupScriptUrl,
                     environmentTeardownScriptUrl: environmentTeardownScriptUrl,
                     environmentConfigUrl: environmentConfigUrl,

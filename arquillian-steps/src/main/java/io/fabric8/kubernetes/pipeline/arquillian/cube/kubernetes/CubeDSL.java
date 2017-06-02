@@ -60,7 +60,7 @@ public class CubeDSL extends GlobalVariable {
             kubernetes = binding.getVariable(getName());
         } else {
             // Note that if this were a method rather than a constructor, we would need to mark it @NonCPS lest it throw CpsCallableInvocation.
-            kubernetes = script.getClass().getClassLoader().loadClass("io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes.Cube").getConstructor(CpsScript.class).newInstance(script);
+            kubernetes = CubeDSL.class.getClassLoader().loadClass("io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes.Cube").getConstructor(CpsScript.class).newInstance(script);
             binding.setVariable(getName(), kubernetes);
         }
         return kubernetes;

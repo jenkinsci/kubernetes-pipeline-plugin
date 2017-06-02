@@ -59,6 +59,10 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
 
     protected boolean isOpenShift;
 
+    AbstractSessionManagerStepExecution(StepContext context) {
+        super(context);
+    }
+
     /**
      * Called when the execution starts
      * @return  true if the execution of this step has synchronously completed before this method returns.

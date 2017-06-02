@@ -17,13 +17,18 @@
 package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 
 import org.arquillian.cube.kubernetes.impl.SessionManager;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import javax.inject.Inject;
 
 public class CreateEnvironmentStepExecution extends AbstractSessionManagerStepExecution<CreateEnvironmentStep> {
 
-    @Inject
     private CreateEnvironmentStep step;
+
+    CreateEnvironmentStepExecution(CreateEnvironmentStep step, StepContext context) {
+        super(context);
+        this.step = step;
+    }
 
     @Override
     public boolean onStart(SessionManager sessionManager) {

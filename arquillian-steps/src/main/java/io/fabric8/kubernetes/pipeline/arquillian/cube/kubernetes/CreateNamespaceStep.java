@@ -17,6 +17,7 @@
 package io.fabric8.kubernetes.pipeline.arquillian.cube.kubernetes;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -72,6 +73,11 @@ public class CreateNamespaceStep extends AbstractStep implements Serializable {
 
     public Boolean isNamespaceDestroyEnabled() {
         return namespaceDestroyEnabled;
+    }
+
+    @Override
+    public StepExecution start(StepContext context) throws Exception {
+        return new CreateNamespaceStepExecution(this, context);
     }
 
     @Extension

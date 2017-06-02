@@ -25,17 +25,15 @@ import org.arquillian.cube.openshift.impl.namespace.OpenshiftNamespaceService;
 import org.csanchez.jenkins.plugins.kubernetes.pipeline.NamespaceAction;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
 
-import javax.inject.Inject;
-
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import io.fabric8.kubernetes.clnt.v2_5.KubernetesClient;
 import io.fabric8.openshift.clnt.v2_5.OpenShiftClient;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 
 public class CreateNamespaceStepExecution extends AbstractStepExecution<CreateNamespaceStep> {
 
-    @Inject
     private CreateNamespaceStep step;
 
     private String sessionId;
@@ -45,6 +43,12 @@ public class CreateNamespaceStepExecution extends AbstractStepExecution<CreateNa
     private transient Configuration configuration;
 
     private boolean isOpenshift;
+
+
+    CreateNamespaceStepExecution(CreateNamespaceStep step, StepContext context) {
+        super(context);
+        this.step = step;
+    }
 
     @Override
     public boolean start() throws Exception {
