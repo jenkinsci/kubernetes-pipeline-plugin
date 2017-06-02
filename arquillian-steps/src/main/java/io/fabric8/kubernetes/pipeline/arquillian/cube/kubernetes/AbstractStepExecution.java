@@ -22,7 +22,7 @@ public abstract class AbstractStepExecution<S extends AbstractStep> extends Step
     private static final transient String DEFAULT_PREFIX = "temp";
     private static final transient String RANDOM_CHARACTERS = "bcdfghjklmnpqrstvwxz0123456789";
 
-    protected static final transient Logger LOGGER = Logger.getLogger(SessionStepExecution.class.getName());
+    protected static final transient Logger LOGGER = Logger.getLogger(InSessionStepExecution.class.getName());
 
     abstract S getStep();
 

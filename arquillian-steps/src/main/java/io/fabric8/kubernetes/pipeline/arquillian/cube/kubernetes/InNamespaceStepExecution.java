@@ -32,9 +32,9 @@ import io.fabric8.openshift.clnt.v2_5.OpenShiftClient;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 
-public class CreateNamespaceStepExecution extends AbstractStepExecution<CreateNamespaceStep> {
+public class InNamespaceStepExecution extends AbstractStepExecution<InNamespaceStep> {
 
-    private CreateNamespaceStep step;
+    private InNamespaceStep step;
 
     private String sessionId;
     private String namespace;
@@ -45,7 +45,7 @@ public class CreateNamespaceStepExecution extends AbstractStepExecution<CreateNa
     private boolean isOpenshift;
 
 
-    CreateNamespaceStepExecution(CreateNamespaceStep step, StepContext context) {
+    InNamespaceStepExecution(InNamespaceStep step, StepContext context) {
         super(context);
         this.step = step;
     }
@@ -99,7 +99,7 @@ public class CreateNamespaceStepExecution extends AbstractStepExecution<CreateNa
 
 
     @Override
-    CreateNamespaceStep getStep() {
+    InNamespaceStep getStep() {
         return step;
     }
 }

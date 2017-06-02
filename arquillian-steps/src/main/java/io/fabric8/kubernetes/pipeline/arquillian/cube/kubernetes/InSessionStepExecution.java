@@ -20,13 +20,11 @@ import org.arquillian.cube.kubernetes.impl.SessionManager;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
-import javax.inject.Inject;
+public class InSessionStepExecution extends AbstractSessionManagerStepExecution<InSessionStep> {
 
-public class SessionStepExecution extends AbstractSessionManagerStepExecution<SessionStep> {
+    private InSessionStep step;
 
-    private SessionStep step;
-
-    SessionStepExecution(SessionStep step,StepContext context) {
+    InSessionStepExecution(InSessionStep step, StepContext context) {
         super(context);
         this.step = step;
     }
@@ -49,7 +47,7 @@ public class SessionStepExecution extends AbstractSessionManagerStepExecution<Se
     }
 
     @Override
-    public SessionStep getStep() {
+    public InSessionStep getStep() {
         return step;
     }
 }
