@@ -32,6 +32,7 @@ public abstract class AbstractSessionManagerStep extends AbstractStep implements
     protected final Map<String, String> labels;
     protected final Map<String, String> annotations;
 
+    protected final Map<String, String> scriptEnvironmentVariables;
     protected final String environmentSetupScriptUrl;
     protected final String environmentTeardownScriptUrl;
 
@@ -46,12 +47,13 @@ public abstract class AbstractSessionManagerStep extends AbstractStep implements
     protected final Boolean namespaceCleanupEnabled;
     protected final Boolean namespaceDestroyEnabled;
 
-    public AbstractSessionManagerStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceCleanupEnabled, Boolean namespaceDestroyEnabled) {
+    public AbstractSessionManagerStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, Map<String, String> scriptEnvironmentVariables, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceCleanupEnabled, Boolean namespaceDestroyEnabled) {
         super(cloud);
         this.name = name;
         this.prefix = prefix;
         this.labels = labels;
         this.annotations = annotations;
+        this.scriptEnvironmentVariables = scriptEnvironmentVariables;
         this.environmentSetupScriptUrl = environmentSetupScriptUrl;
         this.environmentTeardownScriptUrl = environmentTeardownScriptUrl;
         this.environmentConfigUrl = environmentConfigUrl;
@@ -77,6 +79,10 @@ public abstract class AbstractSessionManagerStep extends AbstractStep implements
 
     public Map<String, String> getAnnotations() {
         return annotations;
+    }
+
+    public Map<String, String> getScriptEnvironmentVariables() {
+        return scriptEnvironmentVariables;
     }
 
     public String getEnvironmentSetupScriptUrl() {

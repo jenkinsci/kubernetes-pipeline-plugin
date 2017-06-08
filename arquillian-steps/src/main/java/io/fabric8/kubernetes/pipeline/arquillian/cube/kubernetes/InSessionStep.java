@@ -32,8 +32,8 @@ public class InSessionStep extends AbstractSessionManagerStep implements Seriali
     private static final long serialVersionUID = 5588861066775717487L;
 
     @DataBoundConstructor
-    public InSessionStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceCleanupEnabled, Boolean namespaceDestroyEnabled) {
-       super(cloud, name, prefix, labels, annotations, environmentSetupScriptUrl, environmentTeardownScriptUrl, environmentConfigUrl, environmentDependencies, waitTimeout, waitForServiceList, namespaceLazyCreateEnabled, namespaceCleanupEnabled, namespaceDestroyEnabled);
+    public InSessionStep(String cloud, String name, String prefix, Map<String, String> labels, Map<String, String> annotations, Map<String, String> scriptEnvironmentVariables, String environmentSetupScriptUrl, String environmentTeardownScriptUrl, String environmentConfigUrl, List<String> environmentDependencies, Long waitTimeout, List<String> waitForServiceList, Boolean namespaceLazyCreateEnabled, Boolean namespaceCleanupEnabled, Boolean namespaceDestroyEnabled) {
+       super(cloud, name, prefix, labels, annotations, scriptEnvironmentVariables, environmentSetupScriptUrl, environmentTeardownScriptUrl, environmentConfigUrl, environmentDependencies, waitTimeout, waitForServiceList, namespaceLazyCreateEnabled, namespaceCleanupEnabled, namespaceDestroyEnabled);
     }
 
     @Override

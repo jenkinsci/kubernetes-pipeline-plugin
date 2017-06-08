@@ -119,6 +119,7 @@ class Cube implements Serializable {
         private Boolean namespaceCleanupEnabled = null
         private Boolean namespaceDestroyEnabled = null
 
+        private Map<String, String> scriptEnvironmentVariables;
         private String environmentSetupScriptUrl;
         private String environmentTeardownScriptUrl;
 
@@ -160,8 +161,21 @@ class Cube implements Serializable {
             if (annotations == null) {
                 annotations = new HashMap<>();
             }
-            labels.put(key, value)
-            annotations this
+            annotations.put(key, value)
+            return this
+        }
+
+        public Environment withScriptEnvironmentVariables(Map<String, String> scriptEnvironmentVariables) {
+            this.scriptEnvironmentVariables = scriptEnvironmentVariables
+            return this
+        }
+
+        public Environment addToScriptEnvironmentVariables(String key, String value) {
+            if (scriptEnvironmentVariables == null) {
+                scriptEnvironmentVariables = new HashMap<>()
+            }
+            this.scriptEnvironmentVariables.put(key, value)
+            return this
         }
 
         public Environment withSetupScriptUrl(String environmentSetupScriptUrl) {

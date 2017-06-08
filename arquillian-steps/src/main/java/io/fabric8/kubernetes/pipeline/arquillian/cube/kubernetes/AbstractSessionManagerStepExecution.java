@@ -112,6 +112,7 @@ public abstract class AbstractSessionManagerStepExecution<S extends AbstractSess
                 .withNamespaceDestroyEnabled(isNamespaceDestroyEnabled)
                 .withEnvironmentDependencies(toURL(getStep().getEnvironmentDependencies()))
                 .withEnvironmentConfigUrl(toURL(getStep().getEnvironmentConfigUrl()))
+                .withScriptEnvironmentVariables(getStep().getScriptEnvironmentVariables())
                 .withEnvironmentSetupScriptUrl(toURL(getStep().getEnvironmentSetupScriptUrl()))
                 .withEnvironmentTeardownScriptUrl(toURL(getStep().getEnvironmentTeardownScriptUrl()))
                 .withWaitForServiceList(getStep().getWaitForServiceList())
