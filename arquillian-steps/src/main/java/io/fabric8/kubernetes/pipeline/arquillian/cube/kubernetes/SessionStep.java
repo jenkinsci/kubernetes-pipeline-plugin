@@ -49,7 +49,7 @@ public class SessionStep extends AbstractSessionManagerStep implements Serializa
 
         @Override
         public String getFunctionName() {
-            return "arquillianCubeKubernetesSession";
+            return "inSession";
         }
 
         @Override

@@ -48,7 +48,7 @@ public class CreateEnvironmentStep extends AbstractSessionManagerStep implements
 
         @Override
         public String getFunctionName() {
-            return "arquillianCubeKubernetesCreateEnv";
+            return "createEnvironment";
         }
 
         @Override

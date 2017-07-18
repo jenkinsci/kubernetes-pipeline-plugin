@@ -87,7 +87,7 @@ public class CreateNamespaceStep extends AbstractStep implements Serializable {
 
         @Override
         public String getFunctionName() {
-            return "arquillianCubeKubernetesNamespace";
+            return "inNamespace";
         }
 
         @Override

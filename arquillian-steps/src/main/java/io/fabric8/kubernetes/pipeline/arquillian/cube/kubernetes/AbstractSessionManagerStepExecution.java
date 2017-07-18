@@ -47,8 +47,8 @@ import java.util.List;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import io.fabric8.kubernetes.client.utils.Utils;
-import io.fabric8.kubernetes.clnt.v2_2.KubernetesClient;
-import io.fabric8.openshift.clnt.v2_2.OpenShiftClient;
+import io.fabric8.kubernetes.clnt.v2_5.KubernetesClient;
+import io.fabric8.openshift.clnt.v2_5.OpenShiftClient;
 
 public abstract class AbstractSessionManagerStepExecution<S extends AbstractSessionManagerStep> extends AbstractStepExecution<S> {
 

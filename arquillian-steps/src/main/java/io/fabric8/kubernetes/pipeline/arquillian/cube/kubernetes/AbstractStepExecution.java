@@ -13,9 +13,9 @@ import hudson.AbortException;
 import hudson.model.Run;
 import hudson.slaves.Cloud;
 import io.fabric8.kubernetes.client.utils.Utils;
-import io.fabric8.kubernetes.clnt.v2_2.DefaultKubernetesClient;
-import io.fabric8.kubernetes.clnt.v2_2.KubernetesClient;
-import io.fabric8.kubernetes.clnt.v2_2.utils.Serialization;
+import io.fabric8.kubernetes.clnt.v2_5.DefaultKubernetesClient;
+import io.fabric8.kubernetes.clnt.v2_5.KubernetesClient;
+import io.fabric8.kubernetes.clnt.v2_5.utils.Serialization;
 import jenkins.model.Jenkins;
 
 public abstract class AbstractStepExecution<S extends AbstractStep> extends AbstractStepExecutionImpl {
