@@ -21,8 +21,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.PluginManager;
 import hudson.model.Job;
 import hudson.model.Run;
+import io.fabric8.kubernetes.api.model.Namespace;
+import io.fabric8.kubernetes.api.model.NamespaceList;
 import io.fabric8.openshift.api.model.BuildFluent;
 import io.fabric8.openshift.api.model.DoneableBuild;
+import io.fabric8.openshift.client.OpenShiftAPIGroups;
 import jenkins.model.Jenkins;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.io.Charsets;
@@ -265,7 +268,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
             if (this.buildName != null && !serviceUrls.isEmpty() && isOpenShift()) {
                 EnvironmentRollout environmentRollout = new EnvironmentRollout(environmentName, serviceUrls, deploymentVersions);
                 String yaml = KubernetesHelper.toYaml(environmentRollout);
-                OpenShiftClient oClient = new DefaultOpenShiftClient();
+                OpenShiftClient oClient = openShiftClient();
                 try {
                     BuildFluent.MetadataNested<DoneableBuild> builder = oClient.builds().inNamespace(this.buildConfigNamespace).withName(buildName).
                             edit().
@@ -297,9 +300,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
 
     private void createEnvironment(String environment, Controller controller) throws Exception {
         boolean found = false;
-        if (isOpenShift()) {
-            OpenShiftClient oClient = new DefaultOpenShiftClient();
-
+        OpenShiftClient oClient = openShiftClient();
+        if (isOpenShift() && oClient.supportsOpenShiftAPIGroup(OpenShiftAPIGroups.PROJECT)) {
             ProjectList ps = oClient.projects().list();
             for(Project p : ps.getItems()){
                 listener.getLogger().println("Found namespace " +p.getMetadata().getName());
@@ -309,11 +311,26 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                     break;
                 }
             }
+        } else {
+            NamespaceList ns = getKubernetes().namespaces().list();
+            for(Namespace n : ns.getItems()){
+                listener.getLogger().println("Found namespace " +n.getMetadata().getName());
+                if (environment.equalsIgnoreCase(n.getMetadata().getName())){
+                    found = true;
+                    listener.getLogger().println("Found existing environment " + environment);
+                    break;
+                }
+            }
+
         }
         if (!found){
             listener.getLogger().println("Creating environment " + environment);
             controller.applyNamespace(environment);
         }
+    }
+
+    private DefaultOpenShiftClient openShiftClient() {
+        return new DefaultOpenShiftClient();
     }
 
     private List<HasMetadata> loadImageStreams() throws IOException, InterruptedException {
@@ -342,7 +359,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         if (Strings.isNotBlank(step.getFile())){
             return step.getFile();
         } else {
-            if (getKubernetes().isAdaptable(OpenShiftClient.class)){
+            if (openShiftClient().supportsOpenShiftAPIGroup(OpenShiftAPIGroups.IMAGE)){
                 try{
                     return readFile("target/classes/META-INF/fabric8/openshift.yml");
                 } catch (AbortException e){
@@ -468,12 +485,12 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
     }
 
     private boolean isOpenShift() {
-        return new DefaultOpenShiftClient().isAdaptable(OpenShiftClient.class);
+        return openShiftClient().isAdaptable(OpenShiftClient.class);
     }
 
     private String getRegistry() {
         if (Strings.isNullOrBlank(step.getRegistry())) {
-            if (isOpenShift()){
+            if (isOpenShift() && openShiftClient().supportsOpenShiftAPIGroup(OpenShiftAPIGroups.IMAGE)) {
                 if (Strings.isNotBlank(env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST))){
                     return env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_PORT);
                 }
