@@ -21,8 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.PluginManager;
 import hudson.model.Job;
 import hudson.model.Run;
-import io.fabric8.kubernetes.api.model.Namespace;
-import io.fabric8.kubernetes.api.model.NamespaceList;
+import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.openshift.api.model.BuildFluent;
 import io.fabric8.openshift.api.model.DoneableBuild;
 import io.fabric8.openshift.client.OpenShiftAPIGroups;
@@ -67,13 +66,6 @@ import io.fabric8.devops.ProjectRepositories;
 import io.fabric8.kubernetes.api.Controller;
 import io.fabric8.kubernetes.api.KubernetesHelper;
 import io.fabric8.kubernetes.api.ServiceNames;
-import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.KubernetesList;
-import io.fabric8.kubernetes.api.model.KubernetesResource;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.ReplicationController;
-import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.extensions.Deployment;
 import io.fabric8.kubernetes.api.model.extensions.ReplicaSet;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -187,6 +179,9 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
 
             addEnvironmentAnnotations(entities);
 
+            findOpenShiftBuildConfigName();
+            listener.getLogger().println("Found BuildConfig: " + buildConfigName + " namespace: " + buildConfigNamespace + " Build: " + buildName);
+
             String registry = getRegistry();
             if (Strings.isNotBlank(registry)) {
                 listener.getLogger().println("Adapting resources to use pull images from registry: " + registry);
@@ -194,9 +189,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
             }
 
             listener.getLogger().println("About to apply resource" + entities);
-
-            findOpenShiftBuildConfigName();
-            listener.getLogger().println("Found BuildConfig: " + buildConfigName + " namespace: " + buildConfigNamespace + " Build: " + buildName);
 
             Map<String,String> deploymentVersions = new HashMap<>();
             List<Service> services = new ArrayList<>();
@@ -490,6 +482,20 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
 
     private String getRegistry() {
         if (Strings.isNullOrBlank(step.getRegistry())) {
+            // lets try and find an external docker registry in the users home namespace pipeline config
+            KubernetesClient client = getKubernetes();
+            ConfigMap cm = client.configMaps().inNamespace(this.buildConfigNamespace).withName(Constants.USERS_PIPELINE_CONFIGMAP_NAME).get();
+            if (cm != null){
+                Map<String, String> data = cm.getData();
+                if (data != null){
+                    String rs = data.get(Constants.EXTERNAL_DOCKER_REGISTRY_URL);
+                    if (Strings.isNotBlank(rs)){
+                        return rs;
+                    }
+                }
+            }
+
+            // fall back to namespace env vars to support old fabric8 version
             if (isOpenShift() && openShiftClient().supportsOpenShiftAPIGroup(OpenShiftAPIGroups.IMAGE)) {
                 if (Strings.isNotBlank(env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST))){
                     return env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST) + ":" + env.get(Constants.OPENSHIFT_DOCKER_REGISTRY_SERVICE_PORT);
