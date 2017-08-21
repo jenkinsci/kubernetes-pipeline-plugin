@@ -134,13 +134,12 @@ public class ElasticsearchClient {
         }
     }
 
-    public static boolean isUrlReachable(String url){
-        int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT","1000")); // default to 1 second
+   public static boolean isUrlReachable(String url) {
+        int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT", "1000")); // default to 1 second
         try {
-            HttpURLConnection.setFollowRedirects(false);
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+            con.setInstanceFollowRedirects(false);
             con.setRequestMethod("HEAD");
-
             con.setConnectTimeout(timeout);
 
             return (con.getResponseCode() == HttpURLConnection.HTTP_OK);
