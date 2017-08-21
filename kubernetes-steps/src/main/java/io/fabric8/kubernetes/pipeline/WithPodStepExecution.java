@@ -77,13 +77,15 @@ public class WithPodStepExecution extends AbstractStepExecutionImpl {
         String hostname = env.get(Constants.HOSTNAME, computer.getName());
         String jobname = env.get(Constants.JOB_NAME, computer.getName());
 
-        kubernetes.createPod(hostname, jobname, newTemplate, workspace.getRemote());
+        kubernetes.createPod(hostname, jobname, newTemplate, workspace.getRemote(), step.getLabels());
         kubernetes.watch(podName, podAlive, podStarted, podFinished, true);
         podStarted.await();
 
+        String containerName = step.getContainers().get(step.getContainers().size() - 1).getName();
+
         context.newBodyInvoker()
                 .withContext(BodyInvoker
-                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, podAlive, podStarted, podFinished)))
+                        .mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new PodExecDecorator(kubernetes, podName, containerName, podAlive, podStarted, podFinished)))
                         .withCallback(new PodCallback(podName))
                 .start();
         return false;

@@ -34,16 +34,18 @@ public class PodExecDecorator extends LauncherDecorator implements Serializable 
 
     private final transient KubernetesFacade kubernetes;
     private final transient String name;
+    private final transient String containerName;
     private final transient AtomicBoolean alive;
     private final transient CountDownLatch started;
     private final transient CountDownLatch finished;
 
-    public PodExecDecorator(KubernetesFacade kubernetes, String name, AtomicBoolean alive, CountDownLatch started, CountDownLatch finished) {
+    public PodExecDecorator(KubernetesFacade kubernetes, String name, String containerName, AtomicBoolean alive, CountDownLatch started, CountDownLatch finished) {
         this.kubernetes = kubernetes;
         this.name = name;
         this.alive = alive;
         this.started = started;
         this.finished = finished;
+        this.containerName = containerName;
     }
 
     @Override
@@ -55,7 +57,7 @@ public class PodExecDecorator extends LauncherDecorator implements Serializable 
                 CountDownLatch processStarted = new CountDownLatch(1);
                 CountDownLatch processFinished = new CountDownLatch(1);
 
-                ExecWatch execWatch = kubernetes.exec(name, processAlive, processStarted, processFinished, launcher.getListener().getLogger(),
+                ExecWatch execWatch = kubernetes.exec(name, containerName, processAlive, processStarted, processFinished, launcher.getListener().getLogger(),
                         getCommands(starter)
                 );
                 return new PodExecProc(name, processAlive, processFinished, execWatch);

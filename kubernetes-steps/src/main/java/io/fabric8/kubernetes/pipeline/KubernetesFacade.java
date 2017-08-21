@@ -45,11 +45,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -75,7 +71,7 @@ public final class KubernetesFacade implements Closeable {
     private final KubernetesClient client = new DefaultKubernetesClient();
 
 
-    public Pod createPod(String hostname, String jobname, PodTemplate podTemplate, String buildWorkspace) {
+    public Pod createPod(String hostname, String jobname, PodTemplate podTemplate, String buildWorkspace, Map<String, String> labels) {
         LOGGER.info("Creating pod with name:" + podTemplate.getName());
         List<Volume> volumes = new ArrayList<>();
         List<VolumeMount> mounts = new ArrayList<>();
@@ -99,7 +95,8 @@ public final class KubernetesFacade implements Closeable {
             } else if (client.persistentVolumeClaims().withName(rootPvcName).get() != null) {
                 LOGGER.info("Using workspace pvc: ["+rootPvcName+"] for workspace:[" + rootWorkspace + "].");
                 volumes.add(new VolumeBuilder().withName(volumeName).withNewPersistentVolumeClaim(rootPvcName, false).build());
-                mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath(rootWorkspace).build());
+                //mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath(rootWorkspace).build());
+                mounts.add(new VolumeMountBuilder().withName(volumeName).withMountPath("/home/jenkins/workspace").build());
                 volumeIndex++;
             }
             else {
@@ -154,7 +151,10 @@ public final class KubernetesFacade implements Closeable {
         Pod p = client.pods().createNew()
                 .withNewMetadata()
                     .withName(podTemplate.getName())
+                    .addToLabels(labels)
                     .addToLabels("owner", "jenkins")
+                    .addToLabels("name", podTemplate.getName())
+                    .addToLabels("image", containers.get(0).getName())
                 .endMetadata()
                 .withNewSpec()
                     .withNodeSelector(node != null ? node.getMetadata().getLabels() : new HashMap<String, String>())
@@ -214,8 +214,9 @@ public final class KubernetesFacade implements Closeable {
     }
 
 
-    public ExecWatch exec(String podName,  final AtomicBoolean alive, final CountDownLatch started, final CountDownLatch finished, final PrintStream out, final String... statements) {
+    public ExecWatch exec(String podName, String containerName, final AtomicBoolean alive, final CountDownLatch started, final CountDownLatch finished, final PrintStream out, final String... statements) {
         ExecWatch watch = client.pods().withName(podName)
+                .inContainer(containerName)
                 .redirectingInput()
                 .writingOutput(out)
                 .writingError(out)
