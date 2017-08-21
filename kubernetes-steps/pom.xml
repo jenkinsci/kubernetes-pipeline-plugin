@@ -142,4 +142,21 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>fast</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jenkins-ci.tools</groupId>
+                        <artifactId>maven-hpi-plugin</artifactId>
+                        <configuration>
+                            <disabledTestInjection>true</disabledTestInjection>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
