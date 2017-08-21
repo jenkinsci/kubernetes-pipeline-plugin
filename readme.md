@@ -17,6 +17,10 @@ Kubernetes Pipeline is Jenkins plugin which extends [Jenkins Pipeline](https://g
 - Apply Kubernetes JSON
 - Interaction with ElasticSearch
 
+### Arquillian Steps
+- Create temporary namespaces for testing
+- Install everything you need for end to end testing
+
 ### Aggregator
 An aggregator plugin for all the above.
 

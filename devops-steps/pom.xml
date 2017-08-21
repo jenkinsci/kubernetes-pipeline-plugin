@@ -110,6 +110,16 @@
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>subversion</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- for hpi:run -->
         <dependency>
@@ -128,5 +138,22 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>fast</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jenkins-ci.tools</groupId>
+                        <artifactId>maven-hpi-plugin</artifactId>
+                        <configuration>
+                            <disabledTestInjection>true</disabledTestInjection>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
