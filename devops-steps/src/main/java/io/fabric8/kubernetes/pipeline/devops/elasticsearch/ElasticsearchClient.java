@@ -138,7 +138,7 @@ public class ElasticsearchClient {
         int timeout = Integer.parseInt(Systems.getEnvVarOrSystemProperty("ES_TIMEOUT", "1000")); // default to 1 second
         try {
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
-            com.setInstanceFollowRedirects(false);
+            con.setInstanceFollowRedirects(false);
             con.setRequestMethod("HEAD");
             con.setConnectTimeout(timeout);
 
