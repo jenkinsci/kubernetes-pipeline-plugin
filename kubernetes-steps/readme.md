@@ -151,10 +151,13 @@ You can directly tag the image during the build step:
 
 ## Technical notes
 
-Under the hood the plugin is using hostPath mounts. This requires two things
+### Docker related notes
+
+Under the hood the docker related steps are using hostPath mounts. This requires three things:
 
 - A service account associated with a security context constraint that allows hostPath mounts.
 - A host capable of hostPath mounts
+- To ensure that Jenkins can write to the docker socket (e.g. run as root).
 
 An example security context constraint that configures *myserviceacccount* in the *default* namespace can be found [here](docs/scc-example.json)
 

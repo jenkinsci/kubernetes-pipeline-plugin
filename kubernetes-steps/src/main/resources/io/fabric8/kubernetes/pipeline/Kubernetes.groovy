@@ -157,7 +157,7 @@ class Kubernetes implements Serializable {
 
 
         public <V> V inside(def container = "", Closure<V> body) {
-            def label = container + "${kubernetes.script.env.JOB_NAME}_${kubernetes.script.env.BUILD_NUMBER}".replaceAll('[^A-Za-z0-9]', '_')
+            def label = "" + container + "${kubernetes.script.env.JOB_NAME}_${kubernetes.script.env.BUILD_NUMBER}".replaceAll('[^A-Za-z0-9]', '_')
             List<PodEnvVar> podEnvVars = new ArrayList<>()
             for (Map.Entry<String, String> entry : envVars.entrySet()) {
                 podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()))
@@ -246,8 +246,20 @@ class Kubernetes implements Serializable {
         }
 
         @NonCPS
+        public Container withPrivileged() {
+            this.privileged = true
+            return this
+        }
+
+        @NonCPS
         public Container withAlwaysPullImage(Boolean alwaysPullImage) {
             this.alwaysPullImage = alwaysPullImage
+            return this
+        }
+
+        @NonCPS
+        public Container withAlwaysPullImage() {
+            this.alwaysPullImage = true
             return this
         }
 
@@ -272,6 +284,18 @@ class Kubernetes implements Serializable {
         @NonCPS
         public Container withTtyEnabled(Boolean ttyEnabled) {
             this.ttyEnabled = ttyEnabled
+            return this
+        }
+
+        @NonCPS
+        public Container withTtyEnabled() {
+            this.ttyEnabled = true
+            return this
+        }
+
+        @NonCPS
+        public Container withTtyDisabled() {
+            this.ttyEnabled = false
             return this
         }
 
@@ -420,7 +444,7 @@ class Kubernetes implements Serializable {
         }
 
         Pod toPod() {
-            return new Pod(kubernetes, "jenkins-buildpod", name, "", false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>())
+            return new Pod(kubernetes).withImage(name)
         }
 
 
@@ -489,8 +513,13 @@ class Kubernetes implements Serializable {
         }
 
         Pod fromPath(String path) {
-            kubernetes.node {
+            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
+                // Already inside a node block.
                 kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email, ignorePatterns: ignorePatterns)
+            } else {
+                kubernetes.script.node {
+                    kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email, ignorePatterns: ignorePatterns)
+                }
             }
             return new NamedImage(kubernetes, name).toPod()
         }
@@ -538,8 +567,13 @@ class Kubernetes implements Serializable {
         }
 
         void withTag(String tagName) {
-            kubernetes.node {
+            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
+                // Already inside a node block.
                 kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, force: force, username: username, password: password, email: email)
+            } else {
+                kubernetes.script.node {
+                    kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, force: force, username: username, password: password, email: email)
+                }
             }
         }
     }
@@ -590,8 +624,13 @@ class Kubernetes implements Serializable {
         }
 
         void toRegistry(String registry) {
-            kubernetes.node {
+            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
+                // Already inside a node block.
                 kubernetes.script.pushImage(name: name, tagName: tagName, timeout: timeout, registry: registry, username: username, password: password, email: email)
+            } else {
+                kubernetes.script.node {
+                    kubernetes.script.pushImage(name: name, tagName: tagName, timeout: timeout, registry: registry, username: username, password: password, email: email)
+                }
             }
         }
 
