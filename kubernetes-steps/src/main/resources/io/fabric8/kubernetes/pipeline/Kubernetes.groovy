@@ -28,6 +28,9 @@ import org.csanchez.jenkins.plugins.kubernetes.volumes.PersistentVolumeClaim
 import org.csanchez.jenkins.plugins.kubernetes.volumes.PodVolume
 import org.csanchez.jenkins.plugins.kubernetes.volumes.SecretVolume
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 class Kubernetes implements Serializable {
 
     private org.jenkinsci.plugins.workflow.cps.CpsScript script
@@ -56,16 +59,16 @@ class Kubernetes implements Serializable {
     public static class Pod implements Serializable {
 
         private final Kubernetes kubernetes
-        private String name;
+        private String name
 
         private List<ContainerTemplate> containers = new ArrayList<>()
         private Map<String, String> envVars = new HashMap<>()
         private List<PodVolume> volumes = new ArrayList<>()
         private Map<String, String> labels = new HashMap<>()
 
-        private String serviceAccount;
-        private String nodeSelector;
-        private String workingDir = "/home/jenkins";
+        private String serviceAccount
+        private String nodeSelector
+        private String workingDir = "/home/jenkins"
 
         Pod(Kubernetes kubernetes) {
             this.kubernetes = kubernetes
@@ -78,7 +81,7 @@ class Kubernetes implements Serializable {
 
         @NonCPS
         public Container withNewContainer() {
-            return new Container(this);
+            return new Container(this)
         }
 
 
@@ -133,7 +136,7 @@ class Kubernetes implements Serializable {
 
 
         public Pod withServiceAccount(String serviceAccount) {
-            this.serviceAccount = serviceAccount;
+            this.serviceAccount = serviceAccount
             return this
         }
 
@@ -143,8 +146,8 @@ class Kubernetes implements Serializable {
         }
 
         public Pod workingDir(String workingDir) {
-            this.workingDir = workingDir;
-            return this;
+            this.workingDir = workingDir
+            return this
         }
 
         public Pod withLabel(String name, String value) {
@@ -154,31 +157,24 @@ class Kubernetes implements Serializable {
 
 
         public <V> V inside(def container = "", Closure<V> body) {
-            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
-                // Already inside a node block.
-                kubernetes.script.withPod(name: name, containers: containers, envVars: envVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, workingDir: workingDir, labels: labels) {
-                    body()
-                }
-            } else {
-                def label = "buildpod.${kubernetes.script.env.JOB_NAME}.${kubernetes.script.env.BUILD_NUMBER}".replace('-', '_').replace('/', '_')
-                List<PodEnvVar> podEnvVars = new ArrayList<>();
-                for (Map.Entry<String, String> entry : envVars.entrySet()) {
-                    podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()));
-                }
-                kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, labels: labels) {
-                    kubernetes.script.node(label) {
-                        if (container != null && !container.isEmpty()) {
-                            kubernetes.script.container(name: container) {
-                                body()
-                            }
-                        } else if (containers.size() == 1) {
-                            String name = containers.get(0).name;
-                            kubernetes.script.container(name: name) {
-                                body()
-                            }
-                        } else {
+            def label = "" + container + "${kubernetes.script.env.JOB_NAME}_${kubernetes.script.env.BUILD_NUMBER}".replaceAll('[^A-Za-z0-9]', '_')
+            List<PodEnvVar> podEnvVars = new ArrayList<>()
+            for (Map.Entry<String, String> entry : envVars.entrySet()) {
+                podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()))
+            }
+            kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, labels: labels) {
+                kubernetes.script.node(label) {
+                    if (container != null && !container.isEmpty()) {
+                        kubernetes.script.container(name: container) {
                             body()
                         }
+                    } else if (containers.size() == 1) {
+                        String name = containers.get(0).name
+                        kubernetes.script.container(name: name) {
+                            body()
+                        }
+                    } else {
+                        body()
                     }
                 }
             }
@@ -186,19 +182,22 @@ class Kubernetes implements Serializable {
     }
 
     public static class Container implements Serializable {
-        private transient Pod pod;
-        private String name = "buildcnt";
-        private String image;
-        private Boolean privileged = false;
-        private Boolean alwaysPullImage = false;
-        private String workingDir = "/home/jenkins";
-        private String command = "/bin/sh -c";
-        private String args = "cat";
-        private Boolean ttyEnabled = true;
-        private String resourceRequestCpu;
-        private String resourceRequestMemory;
-        private String resourceLimitCpu;
-        private String resourceLimitMemory;
+        private static final Pattern IMAGE_REGEX = Pattern.compile("(?:.+/)?(?<name>[^:]+)(?::.+)?")
+        private static final String FALLBACK_CONTAINER_NAME = "buildcnt"
+
+        private transient Pod pod
+        private String name
+        private String image
+        private Boolean privileged = false
+        private Boolean alwaysPullImage = false
+        private String workingDir = "/home/jenkins"
+        private String command = "/bin/sh -c"
+        private String args = "cat"
+        private Boolean ttyEnabled = true
+        private String resourceRequestCpu
+        private String resourceRequestMemory
+        private String resourceLimitCpu
+        private String resourceLimitMemory
         private transient Map<String, String> envVars = new HashMap<>()
 
         public Container (Pod pod) {
@@ -212,20 +211,20 @@ class Kubernetes implements Serializable {
         }
 
         public Container(Pod pod, String name, String image, Boolean alwaysPullImage, Boolean privileged, String workingDir, String command, String args, Boolean ttyEnabled, String resourceRequestCpu, String resourceRequestMemory, String resourceLimitCpu, String resourceLimitMemory, Map<String, String> envVars) {
-            this.pod = pod;
-            this.name = name;
-            this.image = image;
-            this.privileged = privileged;
-            this.alwaysPullImage = alwaysPullImage;
-            this.workingDir = workingDir;
-            this.command = command;
-            this.args = args;
-            this.ttyEnabled = ttyEnabled;
-            this.resourceRequestCpu = resourceRequestCpu;
-            this.resourceRequestMemory = resourceRequestMemory;
-            this.resourceLimitCpu = resourceLimitCpu;
-            this.resourceLimitMemory = resourceLimitMemory;
-            this.envVars = envVars;
+            this.pod = pod
+            this.name = name
+            this.image = image
+            this.privileged = privileged
+            this.alwaysPullImage = alwaysPullImage
+            this.workingDir = workingDir
+            this.command = command
+            this.args = args
+            this.ttyEnabled = ttyEnabled
+            this.resourceRequestCpu = resourceRequestCpu
+            this.resourceRequestMemory = resourceRequestMemory
+            this.resourceLimitCpu = resourceLimitCpu
+            this.resourceLimitMemory = resourceLimitMemory
+            this.envVars = envVars
         }
 
         @NonCPS
@@ -247,8 +246,20 @@ class Kubernetes implements Serializable {
         }
 
         @NonCPS
+        public Container withPrivileged() {
+            this.privileged = true
+            return this
+        }
+
+        @NonCPS
         public Container withAlwaysPullImage(Boolean alwaysPullImage) {
             this.alwaysPullImage = alwaysPullImage
+            return this
+        }
+
+        @NonCPS
+        public Container withAlwaysPullImage() {
+            this.alwaysPullImage = true
             return this
         }
 
@@ -273,6 +284,18 @@ class Kubernetes implements Serializable {
         @NonCPS
         public Container withTtyEnabled(Boolean ttyEnabled) {
             this.ttyEnabled = ttyEnabled
+            return this
+        }
+
+        @NonCPS
+        public Container withTtyEnabled() {
+            this.ttyEnabled = true
+            return this
+        }
+
+        @NonCPS
+        public Container withTtyDisabled() {
+            this.ttyEnabled = false
             return this
         }
 
@@ -309,12 +332,13 @@ class Kubernetes implements Serializable {
 
         @NonCPS
         private ContainerTemplate asTemplate() {
-            def containerEnvVars = new ArrayList<>();
+            def containerEnvVars = new ArrayList<>()
             for (Map.Entry<String, String> entry : envVars.entrySet()) {
-                containerEnvVars.add(new ContainerEnvVar(entry.getKey(), entry.getValue()));
+                containerEnvVars.add(new ContainerEnvVar(entry.getKey(), entry.getValue()))
             }
 
-            ContainerTemplate template  = new ContainerTemplate(name, image);
+            String containerName = name != null && !name.isEmpty() ? name : imageName(image, FALLBACK_CONTAINER_NAME)
+            ContainerTemplate template  = new ContainerTemplate(containerName, image)
             template.setAlwaysPullImage(alwaysPullImage)
             template.setCommand(command)
             template.setArgs(args)
@@ -325,7 +349,7 @@ class Kubernetes implements Serializable {
             template.setResourceRequestMemory(resourceRequestMemory)
             template.setResourceLimitCpu(resourceLimitCpu)
             template.setResourceLimitMemory(resourceRequestMemory)
-            return template;
+            return template
         }
 
 
@@ -345,6 +369,28 @@ class Kubernetes implements Serializable {
         @NonCPS
         public <V> V inside(Closure<V> body) {
             return done().inside(container: name, body)
+        }
+
+        /**
+         * Extracts the image name out of the full tag (removes repo and version).
+         * @param fullName          The full name of the image.
+         * @param fallbackValue     The fallback value to use.
+         * @return                  The image name, if found, the fallbackValue otherwise.
+         */
+        @NonCPS //For reasons, beyond my understanding, this annotation needs to be here.
+        private static String imageName(String fullName, String fallbackValue) {
+            try {
+                Matcher matcher = IMAGE_REGEX.matcher(fullName)
+                if (!matcher.find()) {
+                    return fallbackValue
+                }
+
+                String name = matcher.group("name")
+                return name != null && !name.isEmpty() ? name : fallbackValue
+
+            } catch (Throwable t) {
+                return fallbackValue
+            }
         }
     }
 
@@ -398,7 +444,7 @@ class Kubernetes implements Serializable {
         }
 
         Pod toPod() {
-            return new Pod(kubernetes, "jenkins-buildpod", name, "", false, new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>(), new HashMap<String, String>())
+            return new Pod(kubernetes).withImage(name)
         }
 
 
@@ -467,8 +513,13 @@ class Kubernetes implements Serializable {
         }
 
         Pod fromPath(String path) {
-            kubernetes.node {
+            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
+                // Already inside a node block.
                 kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email, ignorePatterns: ignorePatterns)
+            } else {
+                kubernetes.script.node {
+                    kubernetes.script.buildImage(name: name, rm: rm, path: path, timeout: timeout, username: username, password: password, email: email, ignorePatterns: ignorePatterns)
+                }
             }
             return new NamedImage(kubernetes, name).toPod()
         }
@@ -516,8 +567,13 @@ class Kubernetes implements Serializable {
         }
 
         void withTag(String tagName) {
-            kubernetes.node {
+            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
+                // Already inside a node block.
                 kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, force: force, username: username, password: password, email: email)
+            } else {
+                kubernetes.script.node {
+                    kubernetes.script.tagImage(name: name, repo: repo, tag: tagName, force: force, username: username, password: password, email: email)
+                }
             }
         }
     }
@@ -568,8 +624,13 @@ class Kubernetes implements Serializable {
         }
 
         void toRegistry(String registry) {
-            kubernetes.node {
+            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
+                // Already inside a node block.
                 kubernetes.script.pushImage(name: name, tagName: tagName, timeout: timeout, registry: registry, username: username, password: password, email: email)
+            } else {
+                kubernetes.script.node {
+                    kubernetes.script.pushImage(name: name, tagName: tagName, timeout: timeout, registry: registry, username: username, password: password, email: email)
+                }
             }
         }
 

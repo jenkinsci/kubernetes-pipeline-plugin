@@ -18,17 +18,6 @@
     <f:textbox/>
   </f:entry>
 
-
-  <f:entry title="${%Labels}" description="${%List of Labels}">
-    <f:repeatableHeteroProperty field="labels" hasHeader="true" addCaption="Add Label"
-                                        deleteCaption="Delete Label" />
-  </f:entry>
-
-    <f:entry title="${%Annotations}" description="${%List of Annotations}">
-      <f:repeatableHeteroProperty field="annotations" hasHeader="true" addCaption="Add Annotation"
-                                          deleteCaption="Delete Annotation" />
-    </f:entry>
-
   <f:entry field="environmentSetupScriptUrl" title="${%Environment Setup Script Url}">
     <f:textbox/>
   </f:entry>
@@ -41,8 +30,16 @@
     <f:textbox/>
   </f:entry>
 
- <f:entry field="environmentDependencies" title="${%Environment Dependencies}">
+  <f:entry field="environmentDependencies" title="${%Environment Dependencies}">
     <f:textbox/>
+  </f:entry>
+
+  <f:entry field="namespaceLazyCreateEnabled" title="${%Enable Lazy Creation of Namespace}">
+    <f:checkbox/>
+  </f:entry>
+
+  <f:entry field="namespaceDestroyEnabled" title="${%Enable Destruction of Namespace}">
+    <f:checkbox/>
   </f:entry>
 
 </j:jelly>

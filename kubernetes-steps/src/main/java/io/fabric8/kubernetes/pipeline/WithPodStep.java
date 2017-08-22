@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@Deprecated //No longer needed as we delegate to the kubernetes-plugin.
 public class WithPodStep extends AbstractStepImpl implements Serializable {
 
     private static final long serialVersionUID = 5588861066775717487L;

@@ -22,8 +22,6 @@ import hudson.FilePath;
 import hudson.Functions;
 import hudson.model.TaskListener;
 import hudson.os.PosixException;
-import hudson.util.DirScanner;
-import hudson.util.FileVisitor;
 import hudson.util.IOUtils;
 import hudson.util.io.Archiver;
 import hudson.util.io.ArchiverFactory;
@@ -97,14 +95,13 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
                     Future<ImageInspect> buildImageFuture;
                     try (PipedInputStream pin = new PipedInputStream();
                          PipedOutputStream pout = new PipedOutputStream(pin)) {
-
                         createTarFuture = executorService.submit(new CreateTarTask(pout));
                         buildImageFuture = executorService.submit(new BuildImageTask(pin));
-                    }
 
-                    //Wait for the two tasks to complete.
-                    if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
-                        listener.getLogger().println("Failed to create docker image tarball.");
+                        //Wait until the streams can be safely closed.
+                        if (!createTarFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS)) {
+                            listener.getLogger().println("Failed to create docker image tarball.");
+                        }
                     }
 
                     ImageInspect imageInspect = buildImageFuture.get(step.getTimeout(), TimeUnit.MILLISECONDS);
@@ -136,7 +133,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
             OutputHandle handle = null;
             try (DockerClient client = new DefaultDockerClient(step.getDockerConfig())) {
                 final BlockingQueue queue = new LinkedBlockingQueue();
-                listener.getLogger().println("Building image:" + step.getName() + " from path:" + step.getPath() + ".");
+                listener.getLogger().println("Building image: [" + step.getName() + "].");
                 handle = client.image().build()
                         .withRepositoryName(step.getName())
                         .removingIntermediateOnSuccess()
@@ -188,10 +185,14 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
         @Override
         public Boolean call() throws Exception {
             try {
-                listener.getLogger().printf("Creating tar from path: %s.", step.getPath());
-                DockerIgnorePathMatcher matcher = createMatcher(workspace.child(step.getPath()));
-                FileFilter docerIgnoreFilter = new DockerIgnoreFileFilter(matcher);
-                workspace.child(step.getPath()).archive(new DockerArchiverFactory(matcher), outputStream, docerIgnoreFilter);
+                FilePath path = workspace.child(step.getPath());
+                DockerIgnorePathMatcher matcher = createMatcher(path);
+                FileFilter dockerIgnoreFilter = new DockerIgnoreFileFilter(matcher);
+                listener.getLogger().println("Creating tar from path: [" + path.getRemote() + "]:");
+                for (FilePath c : path.list(dockerIgnoreFilter)) {
+                    listener.getLogger().println("\t" + c.getRemote());
+                }
+                path.archive(new DockerArchiverFactory(matcher), outputStream, dockerIgnoreFilter);
                 outputStream.flush();
                 outputStream.close();
                 return true;
@@ -199,13 +200,6 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
                 t.printStackTrace(listener.getLogger());
                 return false;
             }
-        }
-    }
-
-    private class TrueFileFilter implements FileFilter, Serializable {
-        @Override
-        public boolean accept(File pathname) {
-            return true;
         }
     }
 
@@ -222,13 +216,6 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
         }
     }
 
-    public static class MyScanner extends DirScanner {
-
-        @Override
-        public void scan(File dir, FileVisitor visitor) throws IOException {
-
-        }
-    }
 
     private class DockerArchiverFactory extends ArchiverFactory {
 
@@ -248,10 +235,10 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
 
             private final byte[] buf = new byte[8192];
             private final TarArchiveOutputStream tar;
-            private final DockerIgnorePathMatcher matcher;
+            private final DockerIgnorePathMatcher dockerIgnore;
 
-            DockerImageArchiver(OutputStream out, DockerIgnorePathMatcher matcher) {
-                this.matcher = matcher;
+            DockerImageArchiver(OutputStream out, DockerIgnorePathMatcher dockerIgnore) {
+                this.dockerIgnore = dockerIgnore;
                 tar = new TarArchiveOutputStream(out);
                 tar.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
             }
@@ -286,7 +273,7 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
             }
 
         public void visit(File file, String relativePath) throws IOException {
-            if (recursiveMatch(matcher, file.toPath())) {
+            if (recursiveMatch(dockerIgnore, file.toPath())) {
                  return;
             }
 

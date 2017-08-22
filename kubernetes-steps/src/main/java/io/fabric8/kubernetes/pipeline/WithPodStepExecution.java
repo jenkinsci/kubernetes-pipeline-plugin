@@ -42,6 +42,7 @@ import hudson.model.TaskListener;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.workflow.core.Constants;
 
+@Deprecated //No longer needed as we delegate to the kubernetes-plugin.
 public class WithPodStepExecution extends AbstractStepExecutionImpl {
 
     private static final transient Logger LOGGER = Logger.getLogger(WithPodStepExecution.class.getName());
