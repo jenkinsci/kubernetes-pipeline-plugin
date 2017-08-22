@@ -37,6 +37,8 @@ public class Constants {
     public static final String FABRIC8_DOCKER_REGISTRY_SERVICE_PORT = "FABRIC8_DOCKER_REGISTRY_SERVICE_PORT";
     public static final String OPENSHIFT_DOCKER_REGISTRY_SERVICE_HOST = "DOCKER_REGISTRY_SERVICE_HOST";
     public static final String OPENSHIFT_DOCKER_REGISTRY_SERVICE_PORT = "DOCKER_REGISTRY_SERVICE_PORT";
+    public static final String EXTERNAL_DOCKER_REGISTRY_URL = "external-docker-registry-url";
+    public static final String USERS_PIPELINE_CONFIGMAP_NAME = "fabric8-pipelines";
 
     public static final String HOSTNAME = "HOSTNAME";
     public static final String KUBERNETES_HOSTNAME = "kubernetes.io/hostname";
