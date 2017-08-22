@@ -28,6 +28,9 @@ import org.csanchez.jenkins.plugins.kubernetes.volumes.PersistentVolumeClaim
 import org.csanchez.jenkins.plugins.kubernetes.volumes.PodVolume
 import org.csanchez.jenkins.plugins.kubernetes.volumes.SecretVolume
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 class Kubernetes implements Serializable {
 
     private org.jenkinsci.plugins.workflow.cps.CpsScript script
@@ -160,7 +163,7 @@ class Kubernetes implements Serializable {
                     body()
                 }
             } else {
-                def label = "buildpod.${kubernetes.script.env.JOB_NAME}.${kubernetes.script.env.BUILD_NUMBER}".replace('-', '_').replace('/', '_')
+                def label = container + "${kubernetes.script.env.JOB_NAME}_${kubernetes.script.env.BUILD_NUMBER}".replaceAll('[^A-Za-z0-9]', '_')
                 List<PodEnvVar> podEnvVars = new ArrayList<>();
                 for (Map.Entry<String, String> entry : envVars.entrySet()) {
                     podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()));
@@ -186,8 +189,11 @@ class Kubernetes implements Serializable {
     }
 
     public static class Container implements Serializable {
+        private static final Pattern IMAGE_REGEX = Pattern.compile("(?:.+/)?(?<name>[^:]+)(?::.+)?")
+        private static final String FALLBACK_CONTAINER_NAME = "buildcnt"
+
         private transient Pod pod;
-        private String name = "buildcnt";
+        private String name;
         private String image;
         private Boolean privileged = false;
         private Boolean alwaysPullImage = false;
@@ -314,7 +320,8 @@ class Kubernetes implements Serializable {
                 containerEnvVars.add(new ContainerEnvVar(entry.getKey(), entry.getValue()));
             }
 
-            ContainerTemplate template  = new ContainerTemplate(name, image);
+            String containerName = name != null && !name.isEmpty() ? name : imageName(image, FALLBACK_CONTAINER_NAME)
+            ContainerTemplate template  = new ContainerTemplate(containerName, image)
             template.setAlwaysPullImage(alwaysPullImage)
             template.setCommand(command)
             template.setArgs(args)
@@ -345,6 +352,28 @@ class Kubernetes implements Serializable {
         @NonCPS
         public <V> V inside(Closure<V> body) {
             return done().inside(container: name, body)
+        }
+
+        /**
+         * Extracts the image name out of the full tag (removes repo and version).
+         * @param fullName          The full name of the image.
+         * @param fallbackValue     The fallback value to use.
+         * @return                  The image name, if found, the fallbackValue otherwise.
+         */
+        @NonCPS //For reasons, beyond my understanding, this annotation needs to be here.
+        private static String imageName(String fullName, String fallbackValue) {
+            try {
+                Matcher matcher = IMAGE_REGEX.matcher(fullName)
+                if (!matcher.find()) {
+                    return fallbackValue
+                }
+
+                String name = matcher.group("name")
+                return name != null && !name.isEmpty() ? name : fallbackValue
+
+            } catch (Throwable t) {
+                return fallbackValue
+            }
         }
     }
 
