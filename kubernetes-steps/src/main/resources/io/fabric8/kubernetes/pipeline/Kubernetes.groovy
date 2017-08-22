@@ -157,31 +157,24 @@ class Kubernetes implements Serializable {
 
 
         public <V> V inside(def container = "", Closure<V> body) {
-            if (kubernetes.script.env.HOME != null) { // http://unix.stackexchange.com/a/123859/26736
-                // Already inside a node block.
-                kubernetes.script.withPod(name: name, containers: containers, envVars: envVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, workingDir: workingDir, labels: labels) {
-                    body()
-                }
-            } else {
-                def label = container + "${kubernetes.script.env.JOB_NAME}_${kubernetes.script.env.BUILD_NUMBER}".replaceAll('[^A-Za-z0-9]', '_')
-                List<PodEnvVar> podEnvVars = new ArrayList<>()
-                for (Map.Entry<String, String> entry : envVars.entrySet()) {
-                    podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()))
-                }
-                kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, labels: labels) {
-                    kubernetes.script.node(label) {
-                        if (container != null && !container.isEmpty()) {
-                            kubernetes.script.container(name: container) {
-                                body()
-                            }
-                        } else if (containers.size() == 1) {
-                            String name = containers.get(0).name
-                            kubernetes.script.container(name: name) {
-                                body()
-                            }
-                        } else {
+            def label = container + "${kubernetes.script.env.JOB_NAME}_${kubernetes.script.env.BUILD_NUMBER}".replaceAll('[^A-Za-z0-9]', '_')
+            List<PodEnvVar> podEnvVars = new ArrayList<>()
+            for (Map.Entry<String, String> entry : envVars.entrySet()) {
+                podEnvVars.add(new PodEnvVar(entry.getKey(), entry.getValue()))
+            }
+            kubernetes.script.podTemplate(name: name, label: label, containers: containers, envVars: podEnvVars, volumes: volumes, serviceAccount: serviceAccount, nodeSelector: nodeSelector, labels: labels) {
+                kubernetes.script.node(label) {
+                    if (container != null && !container.isEmpty()) {
+                        kubernetes.script.container(name: container) {
                             body()
                         }
+                    } else if (containers.size() == 1) {
+                        String name = containers.get(0).name
+                        kubernetes.script.container(name: name) {
+                            body()
+                        }
+                    } else {
+                        body()
                     }
                 }
             }
