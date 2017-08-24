@@ -26,7 +26,7 @@
 
     <groupId>io.fabric8</groupId>
     <artifactId>kubernetes-pipeline-project</artifactId>
-    <version>1.5-SNAPSHOT</version>
+    <version>1.4-SNAPSHOT</version>
 
     <name>Kubernetes :: Pipeline :: Project</name>
     <description>Use Docker Images and Kubernetes Pods from pipeline.</description>
