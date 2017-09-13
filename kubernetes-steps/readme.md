@@ -66,7 +66,7 @@ Currently the following volume types are supported:
 
 #### Using host path mounts
     
-    kubernetes.pod('buildpod').withImage('maven').withHostPathMount('/path/on/host', '/path/on/container').inside {      
+    kubernetes.pod('buildpod').withImage('maven').withHostPath('/path/on/host', '/path/on/container').inside {      
         git 'https://github.com/fabric8io/kubernetes-pipeline.git'
         sh 'mvn clean install'
     }  
