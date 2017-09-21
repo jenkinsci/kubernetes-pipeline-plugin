@@ -17,12 +17,14 @@
 package io.fabric8.kubernetes.pipeline.devops;
 
 import hudson.Extension;
+import io.fabric8.utils.Strings;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class ApplyStep extends AbstractStepImpl {
+    private static Long defaultReadinessTimeout;
 
     private final String file;
     private final String environment;
@@ -46,7 +48,7 @@ public class ApplyStep extends AbstractStepImpl {
         this.environment = environment;
         this.environmentName = environmentName;
         this.registry = registry;
-        if (readinessTimeout != null) this.readinessTimeout = readinessTimeout; else this.readinessTimeout = 0L;
+        if (readinessTimeout != null) this.readinessTimeout = readinessTimeout; else this.readinessTimeout = getDefaultReadinessTimeout();
         if (createNewResources != null) this.createNewResources = createNewResources;
         if (servicesOnly != null) this.servicesOnly = servicesOnly;
         if (ignoreServices != null) this.ignoreServices = ignoreServices;
@@ -55,6 +57,23 @@ public class ApplyStep extends AbstractStepImpl {
         if (deletePodsOnReplicationControllerUpdate != null) this.deletePodsOnReplicationControllerUpdate = deletePodsOnReplicationControllerUpdate;
         if (rollingUpgrades != null) this.rollingUpgrades = rollingUpgrades;
         if (createNewResources != null) this.rollingUpgradePreserveScale = rollingUpgradePreserveScale;
+    }
+
+    protected static Long getDefaultReadinessTimeout() {
+        if (defaultReadinessTimeout == null) {
+            String value = System.getenv("KUBERNETES_APPLY_READINESS_TIMEOUT");
+            if (Strings.isNotBlank(value)) {
+                try {
+                    defaultReadinessTimeout = Long.parseLong(value);
+                } catch (NumberFormatException e) {
+                    System.out.println("Could not parse $KUBERNETES_APPLY_READINESS_TIMEOUT value `" + value + "` due to: " + e);
+                }
+            }
+            if (defaultReadinessTimeout == null) {
+                defaultReadinessTimeout = 0L;
+            }
+        }
+        return defaultReadinessTimeout;
     }
 
     public String getFile() {
