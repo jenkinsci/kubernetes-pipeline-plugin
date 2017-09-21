@@ -17,14 +17,56 @@
 package io.fabric8.kubernetes.pipeline.devops;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import hudson.AbortException;
+import hudson.EnvVars;
+import hudson.FilePath;
 import hudson.PluginManager;
 import hudson.model.Job;
 import hudson.model.Run;
-import io.fabric8.kubernetes.api.model.*;
+import hudson.model.TaskListener;
+import io.fabric8.devops.ProjectConfig;
+import io.fabric8.devops.ProjectConfigs;
+import io.fabric8.devops.ProjectRepositories;
+import io.fabric8.kubernetes.api.Controller;
+import io.fabric8.kubernetes.api.KubernetesHelper;
+import io.fabric8.kubernetes.api.ServiceNames;
+import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.KubernetesList;
+import io.fabric8.kubernetes.api.model.KubernetesResource;
+import io.fabric8.kubernetes.api.model.Namespace;
+import io.fabric8.kubernetes.api.model.NamespaceList;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.ReplicationController;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.extensions.Deployment;
+import io.fabric8.kubernetes.api.model.extensions.ReplicaSet;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.fabric8.kubernetes.internal.HasMetadataComparator;
+import io.fabric8.kubernetes.pipeline.devops.elasticsearch.DeploymentEventDTO;
+import io.fabric8.kubernetes.pipeline.devops.elasticsearch.ElasticsearchClient;
+import io.fabric8.kubernetes.pipeline.devops.elasticsearch.JsonUtils;
+import io.fabric8.kubernetes.pipeline.devops.git.GitConfig;
+import io.fabric8.kubernetes.pipeline.devops.git.GitInfoCallback;
+import io.fabric8.openshift.api.model.Build;
 import io.fabric8.openshift.api.model.BuildFluent;
+import io.fabric8.openshift.api.model.DeploymentConfig;
 import io.fabric8.openshift.api.model.DoneableBuild;
+import io.fabric8.openshift.api.model.Project;
+import io.fabric8.openshift.api.model.ProjectList;
+import io.fabric8.openshift.api.model.Template;
+import io.fabric8.openshift.client.DefaultOpenShiftClient;
 import io.fabric8.openshift.client.OpenShiftAPIGroups;
+import io.fabric8.openshift.client.OpenShiftClient;
+import io.fabric8.openshift.client.dsl.BuildResource;
+import io.fabric8.utils.IOHelpers;
+import io.fabric8.utils.Strings;
+import io.fabric8.utils.Systems;
+import io.fabric8.utils.URLUtils;
+import io.fabric8.workflow.core.Constants;
 import jenkins.model.Jenkins;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.io.Charsets;
@@ -36,6 +78,7 @@ import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -53,39 +96,6 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.inject.Inject;
-
-import hudson.AbortException;
-import hudson.EnvVars;
-import hudson.FilePath;
-import hudson.model.TaskListener;
-import io.fabric8.devops.ProjectConfig;
-import io.fabric8.devops.ProjectConfigs;
-import io.fabric8.devops.ProjectRepositories;
-import io.fabric8.kubernetes.api.Controller;
-import io.fabric8.kubernetes.api.KubernetesHelper;
-import io.fabric8.kubernetes.api.ServiceNames;
-import io.fabric8.kubernetes.api.model.extensions.Deployment;
-import io.fabric8.kubernetes.api.model.extensions.ReplicaSet;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.internal.HasMetadataComparator;
-import io.fabric8.kubernetes.pipeline.devops.elasticsearch.DeploymentEventDTO;
-import io.fabric8.kubernetes.pipeline.devops.elasticsearch.ElasticsearchClient;
-import io.fabric8.kubernetes.pipeline.devops.elasticsearch.JsonUtils;
-import io.fabric8.kubernetes.pipeline.devops.git.GitConfig;
-import io.fabric8.kubernetes.pipeline.devops.git.GitInfoCallback;
-import io.fabric8.openshift.api.model.DeploymentConfig;
-import io.fabric8.openshift.api.model.Project;
-import io.fabric8.openshift.api.model.ProjectList;
-import io.fabric8.openshift.api.model.Template;
-import io.fabric8.openshift.client.DefaultOpenShiftClient;
-import io.fabric8.openshift.client.OpenShiftClient;
-import io.fabric8.utils.Strings;
-import io.fabric8.utils.Systems;
-import io.fabric8.utils.URLUtils;
-import io.fabric8.workflow.core.Constants;
 
 import static io.fabric8.utils.PropertiesHelper.toMap;
 
@@ -187,13 +197,12 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                 listener.getLogger().println("Adapting resources to use pull images from registry: " + registry);
                 addRegistryToImageNameIfNotPresent(entities, registry);
             }
-
-            listener.getLogger().println("About to apply resource" + entities);
-
+            
             Map<String,String> deploymentVersions = new HashMap<>();
             List<Service> services = new ArrayList<>();
             //Apply all items
             for (HasMetadata entity : entities) {
+                listener.getLogger().println("Applying " + KubernetesHelper.getKind(entity) + " name: " + KubernetesHelper.getKind(entity) + " data: " + entity);
                 if (entity instanceof Pod) {
                     Pod pod = (Pod) entity;
                     controller.applyPod(pod, fileName);
@@ -239,6 +248,9 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                     controller.apply(entity, fileName);
                 }
             }
+            if (!services.isEmpty()) {
+                runExposeController(kubernetes, environment);
+            }
             List<HasMetadata> answer = this.items;
             if (step.getReadinessTimeout().intValue() > 0) {
                 answer = kubernetes.resourceList(items).waitUntilReady(step.getReadinessTimeout(), TimeUnit.MILLISECONDS);
@@ -252,6 +264,8 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                 if (url != null && !url.isEmpty()) {
                     listener.getLogger().println("Service " + serviceName + " in environment " + environmentName + " namespace " + environment + " is at URL: " + url);
                     serviceUrls.put(serviceName, url);
+                } else {
+                    listener.getLogger().println("Service " + serviceName + " in environment " + environmentName + " namespace " + environment + " has no exposeUrl yet!");
                 }
             }
 
@@ -261,23 +275,149 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                 EnvironmentRollout environmentRollout = new EnvironmentRollout(environmentName, serviceUrls, deploymentVersions);
                 String yaml = KubernetesHelper.toYaml(environmentRollout);
                 OpenShiftClient oClient = openShiftClient();
+                BuildResource<Build, DoneableBuild, String, LogWatch> resource = oClient.builds().inNamespace(this.buildConfigNamespace).withName(buildName);
                 try {
-                    BuildFluent.MetadataNested<DoneableBuild> builder = oClient.builds().inNamespace(this.buildConfigNamespace).withName(buildName).
-                            edit().
-                            editMetadata().addToAnnotations("environment.services.fabric8.io/" + environment, yaml);
-                    String version = deploymentVersions.get(this.buildConfigName);
-                    if (Strings.isNotBlank(version)) {
-                        builder.addToAnnotations("fabric8.io/version", version);
+                    Build build = resource.get();
+                    if (build == null) {
+                        listener.getLogger().println("Failed to annotate Build " + buildName + " in namespace " + this.buildConfigNamespace + " due to not found!");
+                    } else {
+                        Map<String, String> annotations = KubernetesHelper.getOrCreateAnnotations(build);
+                        annotations.put("environment.services.fabric8.io/" + environment, yaml);
+                        String version = deploymentVersions.get(this.buildConfigName);
+                        if (Strings.isNotBlank(version)) {
+                            annotations.put("fabric8.io/version", version);
+                        } else {
+                            listener.getLogger().println("Could not annotate the environment service URLs for buildConfigName: " + this.buildConfigName + " as there is no deployment version but has serviceUrls: " + serviceUrls);
+                        }
+                        resource.replace(build);
+                        listener.getLogger().println("Annotated Build " + buildName + " in namespace " + this.buildConfigNamespace + " with version " + version + " environment yaml " + environment + "=" + yaml);
                     }
-                    builder.endMetadata().done();
                 } catch (Exception e) {
-                    listener.getLogger().println("Failed to annotate Build " + buildName + " in namespace " + this.buildConfigNamespace + " due to: " + e);
+                    // lets try use the edit operation in case that works better:
+                    try {
+                        BuildFluent.MetadataNested<DoneableBuild> builder = resource.edit().
+                                editMetadata().addToAnnotations("environment.services.fabric8.io/" + environment, yaml);
+                        String version = deploymentVersions.get(this.buildConfigName);
+                        if (Strings.isNotBlank(version)) {
+                            builder.addToAnnotations("fabric8.io/version", version);
+                        } else {
+                            listener.getLogger().println("Could not annotate the environment service URLs for buildConfigName: " + this.buildConfigName + " as there is no deployment version but has serviceUrls: " + serviceUrls);
+                        }
+                        builder.endMetadata().done();
+
+                    } catch (Exception e2) {
+                        listener.getLogger().println("Failed to annotate Build " + buildName + " in namespace " + this.buildConfigNamespace + " due to: " + e);
+                    }
                 }
+            } else {
+                listener.getLogger().println("Could not annotate the environment service URLs due to buildName: " + buildName + " isOpenShift: " + isOpenShift() + " serviceUrls: " + serviceUrls);
             }
             return answer;
         } catch (Exception e) {
             String stacktrace = ExceptionUtils.getStackTrace(e);
             throw new AbortException("Error during kubernetes apply: " + stacktrace);
+        }
+    }
+
+    /**
+     * Lets run the <a href="https://github.com/fabric8io/exposecontroller/">exposecontroller</a> in one shot mode to update any Services
+     * to use their external URLs
+     */
+    protected void runExposeController(KubernetesClient kubernetes, String environment) throws Exception {
+        if (exposeControllerInstalled()) {
+            String commands = "exposecontroller --watch-namespace " + environment;
+            OpenShiftClient oClient = openShiftClient();
+            if (isOpenShift() && oClient.supportsOpenShiftAPIGroup(OpenShiftAPIGroups.ROUTE)) {
+                commands += " --exposer Route";
+            } else {
+                commands = loadKubernetesExposeControllerCommandLine(kubernetes, commands);
+            }
+
+            if (commands == null) {
+                return;
+            }
+
+            // lets avoid using any input
+            commands = "echo | " + commands;
+            try {
+                listener.getLogger().println("Running: " + commands);
+                runProcess(commands, true);
+                listener.getLogger().println("exposecontroller completed");
+            } catch (Exception e) {
+                throw new Exception("Failed to invoke command " + commands + " due to: " + e, e);
+            }
+        } else {
+            listener.getLogger().println("WARNING: no exposecontroller on the PATH to cannot annotate the Services with their external URLs. You could try the fabric8 docker image for jenkins?");
+        }
+    }
+
+    private String loadKubernetesExposeControllerCommandLine(KubernetesClient kubernetes, String commands) throws Exception {
+        String namespace = System.getenv("KUBERNETES_NAMESPACE");
+        if (Strings.isNullOrBlank(namespace)) {
+            namespace = KubernetesHelper.getNamespace(kubernetes);
+        }
+        ConfigMap configMap = kubernetes.configMaps().inNamespace(namespace).withName("exposecontroller").get();
+        if (configMap == null) {
+            listener.getLogger().println("WARNING: no ConfigMap in namespace " + namespace + " called: exposecontroller so cannot run exposecontroller to expose Service URLs");
+            return null;
+        }
+        String configYaml = null;
+        Map<String, String> data = configMap.getData();
+        if (data != null) {
+            configYaml = data.get("config.yml");
+        }
+        if (Strings.isNullOrBlank(configYaml)) {
+            throw new Exception("ConfigMap " + namespace + "/exposecontroller does not have a `config.yml` data entry");
+        }
+        Map map;
+        try {
+            map = KubernetesHelper.loadYaml(configYaml, Map.class);
+        } catch (IOException e) {
+            throw new Exception("Could not parse YAML in ConfigMap " + namespace + "/exposecontroller entry `config.yml`: " + e, e);
+        }
+        StringBuilder builder = new StringBuilder(commands);
+        appendCliArgument(builder, "--http", map.get("http"));
+        appendCliArgument(builder, "--exposer", map.get("exposer"));
+        appendCliArgument(builder, "--domain", map.get("domain"));
+        return builder.toString();
+    }
+
+    /**
+     * Appends a CLI argument if the value is not null or empty
+     */
+    private void appendCliArgument(StringBuilder builder, String arg, Object value) {
+        if (value != null) {
+            String text = value.toString();
+            if (Strings.isNotBlank(text)) {
+                builder.append(" ");
+                builder.append(arg);
+                builder.append(" ");
+                builder.append(text);
+            }
+        }
+    }
+
+    protected boolean exposeControllerInstalled() {
+        String commands = "exposecontroller --help";
+        try {
+            runProcess(commands, false);
+            return true;
+        } catch (Exception e) {
+            listener.getLogger().println("Failed to execute process " +commands + " : " + e);
+        }
+        return false;
+    }
+
+    private void runProcess(String commands, boolean verbose) throws IOException {
+        ProcessBuilder builder = new ProcessBuilder("bash", "-c", commands);
+        Process process = builder.start();
+
+        //Process process = Runtime.getRuntime().exec(commands);
+        String out = IOHelpers.readFully(process.getInputStream());
+        String err = IOHelpers.readFully(process.getErrorStream());
+        if (verbose) {
+            listener.getLogger().println("command: " + commands + " out: " + out);
+            listener.getLogger().println("command: " + commands + " err: " + err);
         }
     }
 
@@ -287,6 +427,10 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         // TODO if there is no version label could we find it from somewhere else?
         if (Strings.isNotBlank(version)) {
             deploymentVersions.put(name, version);
+        } else {
+            listener.getLogger().println("No version label for  " + KubernetesHelper.getKind(resource) + " "
+                    + KubernetesHelper.getName(resource) + " in namespace "
+                    + KubernetesHelper.getNamespace(resource));
         }
     }
 
