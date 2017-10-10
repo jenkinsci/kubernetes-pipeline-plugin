@@ -80,7 +80,7 @@
         <git-client.version>1.19.2</git-client.version>
         <httpcore.version>4.4</httpcore.version>
         <jackson-databind.version>2.6.3</jackson-databind.version>
-        <kubernetes-client.version>2.6.3</kubernetes-client.version>
+        <kubernetes-client.version>3.0.0</kubernetes-client.version>
 
         <maven-hpi-plugin.version>1.112</maven-hpi-plugin.version>
         <restassured.version>1.7.2</restassured.version>
