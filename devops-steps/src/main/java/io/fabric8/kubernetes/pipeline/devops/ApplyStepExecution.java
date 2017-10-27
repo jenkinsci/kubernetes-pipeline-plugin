@@ -628,7 +628,11 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         if (Strings.isNullOrBlank(step.getRegistry())) {
             // lets try and find an external docker registry in the users home namespace pipeline config
             KubernetesClient client = getKubernetes();
-            ConfigMap cm = client.configMaps().inNamespace(this.buildConfigNamespace).withName(Constants.USERS_PIPELINE_CONFIGMAP_NAME).get();
+            String ns = this.buildConfigNamespace;
+            if (ns == null){
+                ns = client.getNamespace();
+            }
+            ConfigMap cm = client.configMaps().inNamespace(ns).withName(Constants.USERS_PIPELINE_CONFIGMAP_NAME).get();
             if (cm != null){
                 Map<String, String> data = cm.getData();
                 if (data != null){
