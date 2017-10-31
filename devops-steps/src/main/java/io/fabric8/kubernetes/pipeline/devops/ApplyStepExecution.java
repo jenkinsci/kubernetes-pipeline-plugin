@@ -30,6 +30,7 @@ import io.fabric8.devops.ProjectRepositories;
 import io.fabric8.kubernetes.api.Controller;
 import io.fabric8.kubernetes.api.KubernetesHelper;
 import io.fabric8.kubernetes.api.ServiceNames;
+import io.fabric8.kubernetes.api.builder.TypedVisitor;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -37,6 +38,7 @@ import io.fabric8.kubernetes.api.model.KubernetesList;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.NamespaceList;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.api.model.Service;
@@ -253,7 +255,13 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
             }
             List<HasMetadata> answer = this.items;
             if (step.getReadinessTimeout().intValue() > 0) {
-                answer = kubernetes.resourceList(items).waitUntilReady(step.getReadinessTimeout(), TimeUnit.MILLISECONDS);
+                answer = kubernetes.resourceList(items).accept(new TypedVisitor<ObjectMetaBuilder>() {
+
+                    @Override
+                    public void visit(ObjectMetaBuilder objectMetaBuilder) {
+                        objectMetaBuilder.withNamespace(environment);
+                    }
+                }).waitUntilReady(step.getReadinessTimeout(), TimeUnit.MILLISECONDS);
             }
 
             // now lets try annotate the BuildConfig with the running services in this environment
