@@ -16,7 +16,7 @@ This plugin provides pipeline steps, that allow you to create a pod and run cust
 The overall syntax looks like this:
 
     kubernetes.pod('buildpod')
-        .withSerivceAccount(<serivce accoutn>)
+        .withServiceAccount(<service account>)
         .withSecret(<mount path>, <secret name>)
         .withEnvar(<gloabal key1>, <value1>)
         .withNewContainer().withName(<name1>).withImage(<image1>)
