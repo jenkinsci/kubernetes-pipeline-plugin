@@ -88,6 +88,12 @@ public class PushImageStepExecution extends AbstractSynchronousStepExecution<Voi
                                 }
 
                                 @Override
+                                public void onError(Throwable throwable) {
+                                    listener.getLogger().println(throwable);
+                                    queue.add(new RuntimeException(throwable));
+                                }
+
+                                @Override
                                 public void onEvent(String s) {
                                     listener.getLogger().println(s);
                                 }

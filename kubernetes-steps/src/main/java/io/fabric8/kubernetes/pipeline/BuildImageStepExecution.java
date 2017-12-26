@@ -150,6 +150,11 @@ public class BuildImageStepExecution extends AbstractSynchronousStepExecution<Im
                             }
 
                             @Override
+                            public void onError(Throwable throwable) {
+                                queue.add(new RuntimeException("Failed to build image. Error:" + throwable));
+                            }
+
+                            @Override
                             public void onEvent(String s) {
                                 listener.getLogger().println(s);
                             }
