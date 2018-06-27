@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: launchpad-builder
+  annotations:
+    description: This template creates a Build Configuration using an S2I builder.
+    tags: instant-app
+objects:
+  - apiVersion: v1
+    kind: Route
+    metadata:
+      labels:
+        project: nodejs-rest-http
+        provider: nodeshift
+        version: 2.0.0
+      name: nodejs-rest-http
+    spec:
+      port:
+        targetPort: 8080
+      to:
+        kind: Service
+        name: nodejs-rest-http
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: runtime
+    spec:
+      tags:
+        - name: latest
+          from:
+            kind: DockerImage
+            name: 'bucharestgold/centos7-s2i-nodejs:10.x'
+  - apiVersion: v1
+    kind: BuildConfig
+    metadata:
+      name: nodejs-rest-http
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: 'nodejs-rest-http:latest'
+      postCommit: {}
+      resources: {}
+      source:
+        git:
+          uri: '${SOURCE_REPOSITORY_URL}'
+          ref: '${SOURCE_REPOSITORY_REF}'
+        type: Git
+      strategy:
+        type: Source
+        sourceStrategy:
+          from:
+            kind: ImageStreamTag
+            name: 'runtime:latest'
+          incremental: true
+      triggers:
+        - github:
+            secret: '${GITHUB_WEBHOOK_SECRET}'
+          type: GitHub
+        - type: ConfigChange
+        - imageChange: {}
+          type: ImageChange
+    status:
+      lastVersion: 0

@@ -51,13 +51,7 @@ import io.fabric8.kubernetes.pipeline.devops.elasticsearch.ElasticsearchClient;
 import io.fabric8.kubernetes.pipeline.devops.elasticsearch.JsonUtils;
 import io.fabric8.kubernetes.pipeline.devops.git.GitConfig;
 import io.fabric8.kubernetes.pipeline.devops.git.GitInfoCallback;
-import io.fabric8.openshift.api.model.Build;
-import io.fabric8.openshift.api.model.BuildFluent;
-import io.fabric8.openshift.api.model.DeploymentConfig;
-import io.fabric8.openshift.api.model.DoneableBuild;
-import io.fabric8.openshift.api.model.Project;
-import io.fabric8.openshift.api.model.ProjectList;
-import io.fabric8.openshift.api.model.Template;
+import io.fabric8.openshift.api.model.*;
 import io.fabric8.openshift.client.DefaultOpenShiftClient;
 import io.fabric8.openshift.client.OpenShiftAPIGroups;
 import io.fabric8.openshift.client.OpenShiftClient;
@@ -84,15 +78,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -100,6 +86,8 @@ import java.util.regex.Pattern;
 import static io.fabric8.utils.PropertiesHelper.toMap;
 
 public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<HasMetadata>> {
+
+    private final ServiceResourceUtil serviceFixUtil = new ServiceResourceUtil();
 
     @Inject
     private transient ApplyStep step;
@@ -126,7 +114,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
     private transient String buildConfigName;
     private transient String buildConfigNamespace;
     private transient String buildName;
-    
+
     @Override
     public List<HasMetadata> run() throws Exception {
         String environment = step.getEnvironment();
@@ -201,6 +189,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
             Map<String,String> deploymentVersions = new HashMap<>();
             List<Service> services = new ArrayList<>();
             //Apply all items
+            serviceFixUtil.patchServiceName(entities);
             for (HasMetadata entity : entities) {
                 listener.getLogger().println("Applying " + KubernetesHelper.getKind(entity) + " name: " + KubernetesHelper.getKind(entity) + " data: " + entity);
                 if (entity instanceof Pod) {
@@ -214,6 +203,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                     Service service = (Service) entity;
                     services.add(service);
                     controller.applyService(service, fileName);
+
                 } else if (entity instanceof ReplicationController) {
                     ReplicationController replicationController = (ReplicationController) entity;
                     controller.applyReplicationController(replicationController, fileName);
