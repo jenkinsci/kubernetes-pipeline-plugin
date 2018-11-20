@@ -168,19 +168,14 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
             // TODO do we need this?
             String fileName = "pipeline.json";
 
-
-            Set<KubernetesList> kubeConfigs = new LinkedHashSet<>();
-
-            for (KubernetesList c : kubeConfigs) {
-                entities.addAll(c.getItems());
-            }
-
             entities.addAll(KubernetesHelper.toItemList(dto));
 
             addEnvironmentAnnotations(entities);
 
-            findOpenShiftBuildConfigName();
-            listener.getLogger().println("Found BuildConfig: " + buildConfigName + " namespace: " + buildConfigNamespace + " Build: " + buildName);
+            if (isOpenShift()) {
+                findOpenShiftBuildConfigName();
+                listener.getLogger().println("Found BuildConfig: " + buildConfigName + " namespace: " + buildConfigNamespace + " Build: " + buildName);
+            }
 
             String registry = getRegistry();
             if (Strings.isNotBlank(registry)) {
@@ -410,7 +405,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         ProcessBuilder builder = new ProcessBuilder("bash", "-c", commands);
         Process process = builder.start();
 
-        //Process process = Runtime.getRuntime().exec(commands);
         String out = IOHelpers.readFully(process.getInputStream());
         String err = IOHelpers.readFully(process.getErrorStream());
         if (verbose) {
@@ -432,7 +426,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         }
     }
 
-    private void createEnvironment(String environment, Controller controller) throws Exception {
+    private void createEnvironment(String environment, Controller controller) {
         boolean found = false;
         OpenShiftClient oClient = openShiftClient();
         if (isOpenShift() && oClient.supportsOpenShiftAPIGroup(OpenShiftAPIGroups.PROJECT)) {
@@ -470,7 +464,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
     private List<HasMetadata> loadImageStreams() throws IOException, InterruptedException {
         if (kubernetes.isAdaptable(OpenShiftClient.class)) {
             FilePath child = workspace.child("target");
-            if (child != null && child.exists() && child.isDirectory()) {
+            if (child.exists() && child.isDirectory()) {
                 List<FilePath> paths = child.list();
                 if (paths != null) {
                     for (FilePath path : paths) {
@@ -486,7 +480,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
                 }
             }
         }
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     private String getResources() throws AbortException {
@@ -593,7 +587,14 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
 
     protected Class<?> findPluginClass(String className) {
         try {
-            return Thread.currentThread().getContextClassLoader().loadClass(className);
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader == null) {
+                classLoader = ClassLoader.getSystemClassLoader();
+            }
+            if (classLoader == null) {
+                throw new ClassNotFoundException();
+            }
+            return classLoader.loadClass(className);
         } catch (ClassNotFoundException e) {
             Jenkins instance = Jenkins.getInstance();
             PluginManager pluginManager = instance.getPluginManager();
@@ -612,7 +613,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         }
         String[] split = environment.split("-");
         String answer = environment;
-        if (split != null && split.length > 0) {
+        if (split.length > 0) {
             answer = split[split.length - 1];
         }
         return StringUtils.capitalize(answer);
@@ -651,33 +652,6 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         }
     }
 
-    /**
-     * Should we try to create a route for the given service?
-     * <p>
-     * By default lets ignore the kubernetes services and any service which does not expose ports 80 and 443
-     *
-     * @return true if we should create an OpenShift Route for this service.
-     */
-    protected static boolean shouldCreateRouteForService(Service service, String id, TaskListener listener) {
-        if ("kubernetes".equals(id) || "kubernetes-ro".equals(id)) {
-            return false;
-        }
-        Set<Integer> ports = KubernetesHelper.getPorts(service);
-        if (ports.size() == 1) {
-            return true;
-        } else {
-            listener.getLogger().println("Not generating route for service " + id + " as only single port services are supported. Has ports: " + ports);
-            return false;
-        }
-    }
-
-    private Object applyTemplates(Template template, KubernetesClient kubernetes, Controller controller, String fileName, String namespace) throws Exception {
-        KubernetesHelper.setNamespace(template, namespace);
-        // TODO do we need to override template values during a CD pipeline?
-        //overrideTemplateParameters(template);
-        return controller.applyTemplate(template, fileName);
-    }
-
     private void addEnvironmentAnnotations(Iterable<HasMetadata> items) throws Exception {
         if (items != null) {
             for (HasMetadata item : items) {
@@ -696,7 +670,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         }
     }
 
-    public void addRegistryToImageNameIfNotPresent(Iterable<HasMetadata> items, String registry) throws Exception {
+    public void addRegistryToImageNameIfNotPresent(Iterable<HasMetadata> items, String registry) {
         if (items != null) {
             for (HasMetadata item : items) {
                 if (item instanceof KubernetesList) {
@@ -742,7 +716,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
      * Checks to see if there's a registry name already provided in the image name
      *
      * Code influenced from <a href="https://github.com/rhuss/docker-maven-plugin/blob/master/src/main/java/org/jolokia/docker/maven/util/ImageName.java">docker-maven-plugin</a>
-     * @param imageName
+     * @param imageName the image name
      * @return true if the image name contains a registry
      */
     public static boolean hasRegistry(String imageName) {
@@ -773,7 +747,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         addPropertiesFileToMap(url, mapEnvVarToAnnotation);
         //TODO add this in and support for non java projects
         //addPropertiesFileToMap(this.environmentVariableToAnnotationsFile, mapEnvVarToAnnotation);
-        addPropertiesFileToMap(new File("./src/main/fabric8/environemntToAnnotations.properties"), mapEnvVarToAnnotation);
+        addPropertiesFileToMap(new File("./src/main/fabric8/environmentToAnnotations.properties"), mapEnvVarToAnnotation);
         Map<String, String> annotations = KubernetesHelper.getOrCreateAnnotations(resource);
         Set<Map.Entry<String, String>> entries = mapEnvVarToAnnotation.entrySet();
         for (Map.Entry<String, String> entry : entries) {
@@ -799,7 +773,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
     /**
      * Tries to default some environment variables if they are not already defined.
      * <p>
-     * This can happen if using Jenkins Workflow which doens't seem to define BUILD_URL or GIT_URL for example
+     * This can happen if using Jenkins Workflow which doesn't seem to define BUILD_URL or GIT_URL for example
      *
      * @return the value of the environment variable name if it can be found or calculated
      */
@@ -913,7 +887,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         }
     }
 
-    public ProjectConfig getProjectConfig() throws AbortException {
+    public ProjectConfig getProjectConfig() {
         try {
             return ProjectConfigs.parseProjectConfig(readFile("fabric8.yml"));
         } catch (Exception e) {
@@ -932,7 +906,7 @@ public class ApplyStepExecution extends AbstractSynchronousStepExecution<List<Ha
         }
     }
 
-    public String getDeploymentEventJson(String resource, String environment, String environmentName) throws IOException, InterruptedException {
+    public String getDeploymentEventJson(String resource, String environment, String environmentName) throws IOException {
         DeploymentEventDTO event = new DeploymentEventDTO();
 
         GitConfig config = getGitConfig();
