@@ -30,7 +30,7 @@ The are are a lot of shortcuts that make the syntax less verbose, and sugar that
 It's even possible to skip the DSL completely and just use the steps directly or with the help of the script builder.
 
 When a snippet like the above is wrapped inside a `node` it will just create the build pod and run the specified shell commands inside it.
-If there is no `none` it will delegate to [kubernetes plugin](#https://github.com/jenkinsci/kubernetes-plugin) and create a kubernetes slave pod, that will additionally
+If there is no `node` it will delegate to [kubernetes plugin](#https://github.com/jenkinsci/kubernetes-plugin) and create a kubernetes slave pod, that will additionally
 contain the specified container.
 
 ### Using a maven kubernetes pod
