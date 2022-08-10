@@ -92,7 +92,7 @@
         <jenkins-durable-task.version>1.13</jenkins-durable-task.version>
         <jenkins-durable-task-step.version>2.10</jenkins-durable-task-step.version>
         <jenkins-git.version>2.4.1</jenkins-git.version>
-        <jenkins-git-client.version>1.19.2</jenkins-git-client.version>
+        <jenkins-git-client.version>3.11.1</jenkins-git-client.version>
         <jenkins-junit.version>1.6</jenkins-junit.version>
         <jenkins-kubernetes-plugin.version>0.12</jenkins-kubernetes-plugin.version>
         <jenkins-mailer.version>1.16</jenkins-mailer.version>
