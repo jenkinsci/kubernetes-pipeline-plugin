@@ -105,7 +105,7 @@
         <jenkins-workflow-job.version>2.6</jenkins-workflow-job.version>
         <jenkins-workflow-step-api.version>2.7</jenkins-workflow-step-api.version>
         <jenkins-workflow-support.version>2.12</jenkins-workflow-support.version>
-        <jenkins-subversion.version>2.5</jenkins-subversion.version>
+        <jenkins-subversion.version>2.15.4</jenkins-subversion.version>
     </properties>
 
     <modules>
