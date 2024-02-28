@@ -16,12 +16,12 @@
 package io.fabric8.kubernetes.pipeline.devops.elasticsearch;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /**
  */
-@JsonNaming(value = PropertyNamingStrategy.LowerCaseWithUnderscoresStrategy.class)
+@JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public abstract class DTOSupport {
 
