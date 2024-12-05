@@ -101,7 +101,7 @@
         <jenkins-ssh-credentials.version>1.11</jenkins-ssh-credentials.version>
         <jenkins-structs.version>1.5</jenkins-structs.version>
         <jenkins-workflow-api.version>2.8</jenkins-workflow-api.version>
-        <jenkins-workflow-cps.version>2.17</jenkins-workflow-cps.version>
+        <jenkins-workflow-cps.version>2.65</jenkins-workflow-cps.version>
         <jenkins-workflow-job.version>2.6</jenkins-workflow-job.version>
         <jenkins-workflow-step-api.version>2.7</jenkins-workflow-step-api.version>
         <jenkins-workflow-support.version>2.12</jenkins-workflow-support.version>
